@@ -1,3 +1,4 @@
+name: deploy-web-app
 on:
   workflow_call:
     inputs:
@@ -12,25 +13,27 @@ on:
         required: false
         default: 'Development'
         type: string
+    secrets:
+      AZURE_WEBAPP_PUBLISH_PROFILE:
+        required: true
 
 env:
-  AZURE_WEBAPP_NAME: ${{ inputs.webAppName }} 
-  NODE_VERSION: ${{ inputs.nodeVersion }} 
+  AZURE_WEBAPP_NAME: ${{ inputs.webAppName }}
+  NODE_VERSION: ${{ inputs.nodeVersion }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Deploy Azure Web App to App Service
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Use Node.js ${{ inputs.nodeVersion }} 
+      - name: Use Node.js ${{ inputs.nodeVersion }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ inputs.nodeVersion }} 
+          node-version: ${{ inputs.nodeVersion }}
           registry-url: 'https://npm.pkg.github.com'
           scope: '@makerxstudio'
           cache: 'npm'
@@ -45,7 +48,7 @@ jobs:
       - run: npm run lint --if-present
       - run: npm run check-types --if-present
       - run: npm test --if-present
-      - run: npm build
+      - run: npm run build
 
       - name: Zip
         run: pushd build && zip ../node-app.zip . -r && popd
@@ -57,12 +60,13 @@ jobs:
           path: node-app.zip
 
   deploy:
+    name: ${{ inputs.environmentName }}
     permissions:
       contents: none
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: ${{ inputs.environmentName }} 
+      name: ${{ inputs.environmentName }}
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
