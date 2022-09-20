@@ -1,0 +1,50 @@
+name: publish
+on:
+  workflow_call:
+    inputs:
+      nodeVersion:
+        required: false
+        type: string
+        default: 16.x
+      packagePath:
+        required: false
+        type: string
+        default: './dist/package.json'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish package to Github repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ inputs.nodeVersion }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@makerxstudio'
+          cache: 'npm'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: npm ci --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm rebuild && npm run prepare --if-present
+
+      - run: npm run lint --if-present
+      - run: npm run check-types --if-present
+      - run: npm test --if-present
+      - run: npm build
+
+      - name: Publish (if version has been updated)
+        uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: ${{ inputs.packagePath }}
+          check-version: true
+          registry: 'https://npm.pkg.github.com'
