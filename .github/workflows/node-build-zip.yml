@@ -5,13 +5,13 @@ on:
         required: false
         type: string
         default: 16.x
-      packagePath:
+      artifactName:
         required: false
         type: string
-        default: './dist/package.json'
+        default: node-app
 
 jobs:
-  node-publish-internal:
+  build-zip:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,10 +36,11 @@ jobs:
 
       - run: npm run build
 
-      - name: Publish (if version has been updated)
-        uses: JS-DevTools/npm-publish@v1
+      - name: Zip
+        run: pushd build && zip ../node-app.zip . -r && popd
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          package: ${{ inputs.packagePath }}
-          check-version: true
-          registry: 'https://npm.pkg.github.com'
+          name: ${{ inputs.artifactName }}
+          path: node-app.zip

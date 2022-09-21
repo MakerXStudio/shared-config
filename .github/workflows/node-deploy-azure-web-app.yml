@@ -9,6 +9,14 @@ on:
       webAppName:
         required: true
         type: string
+      artifactName:
+        required: false
+        type: string
+        default: 'node-app'
+      artifactFileName:
+        required: false
+        type: string
+        default: 'node-app.zip'
       environmentName:
         required: false
         default: 'Development'
@@ -22,49 +30,11 @@ env:
   NODE_VERSION: ${{ inputs.nodeVersion }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Use Node.js ${{ inputs.nodeVersion }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.nodeVersion }}
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@makerxstudio'
-          cache: 'npm'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - run: npm ci --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm rebuild && npm run prepare --if-present
-
-      - run: npm run lint --if-present
-      - run: npm run check-types --if-present
-      - run: npm test --if-present
-      - run: npm run build
-
-      - name: Zip
-        run: pushd build && zip ../node-app.zip . -r && popd
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v3
-        with:
-          name: node-app
-          path: node-app.zip
-
-  deploy:
+  deploy-azure-web-app:
     name: ${{ inputs.environmentName }}
     permissions:
       contents: none
     runs-on: ubuntu-latest
-    needs: build
     environment:
       name: ${{ inputs.environmentName }}
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
@@ -73,7 +43,7 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
-          name: node-app
+          name: ${{ inputs.artifactName }}
 
       - name: 'Deploy to Azure WebApp'
         id: deploy-to-webapp
@@ -81,4 +51,4 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: node-app.zip
+          package: ${{ inputs.artifactFileName }}

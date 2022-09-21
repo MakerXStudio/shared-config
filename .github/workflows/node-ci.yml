@@ -2,12 +2,12 @@ on:
   workflow_call:
 
 jobs:
-  ci:
+  node-ci:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [16.x]
+        node-version: [16.x, 18.x]
 
     steps:
       - name: Checkout
@@ -30,4 +30,5 @@ jobs:
 
       - run: npm run lint --if-present
       - run: npm run check-types --if-present
-      - run: npm test --if-present
+      - run: npm run test --if-present
+      - run: npm run audit --if-present
