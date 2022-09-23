@@ -1,5 +1,22 @@
 on:
   workflow_call:
+    inputs:
+      lintScript:
+        required: false
+        type: string
+        default: npm run lint --if-present
+      compileScript:
+        required: false
+        type: string
+        default: npm run check-types --if-present
+      testScript:
+        required: false
+        type: string
+        default: npm run test --if-present
+      auditScript:
+        required: false
+        type: string
+        default: npm run audit --if-present
 
 jobs:
   node-ci:
@@ -28,7 +45,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm rebuild && npm run prepare --if-present
 
-      - run: npm run lint --if-present
-      - run: npm run check-types --if-present
-      - run: npm run test --if-present
-      - run: npm run audit --if-present
+      - run: ${{ inputs.lintScript }}
+      - run: ${{ inputs.compileScript }}
+      - run: ${{ inputs.testScript }}
+      - run: ${{ inputs.auditScript }}
