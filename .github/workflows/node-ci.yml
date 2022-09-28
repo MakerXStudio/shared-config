@@ -32,6 +32,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      # setup node + private repo access
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
@@ -40,12 +41,26 @@ jobs:
           scope: '@makerxstudio'
           cache: 'npm'
 
+      # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
+      # run all the CI scripts
       - run: ${{ inputs.lintScript }}
       - run: ${{ inputs.compileScript }}
-      - run: ${{ inputs.testScript }}
       - run: ${{ inputs.auditScript }}
+      - run: ${{ inputs.testScript }}
+
+      # upload test results, if found
+      - name: Upload test results (if found)
+      - uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: test-results
+          path: test-results.xml
+          if-no-files-found: ignore
+
+      
