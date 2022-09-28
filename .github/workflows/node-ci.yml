@@ -51,16 +51,7 @@ jobs:
       # run all the CI scripts
       - run: ${{ inputs.lintScript }}
       - run: ${{ inputs.compileScript }}
-      - run: ${{ inputs.auditScript }}
       - run: ${{ inputs.testScript }}
-
-      # upload test results, if found
-      - name: Upload test results (if found)
-        uses: actions/upload-artifact@v3
-        if: success() || failure()
-        with:
-          name: test-results
-          path: test-results.xml
-          if-no-files-found: ignore
+      - run: ${{ inputs.auditScript }}
 
       
