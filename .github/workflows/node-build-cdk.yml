@@ -1,0 +1,57 @@
+on:
+  workflow_call:
+    inputs:
+      workingDirectory:
+        required: false
+        type: string
+        default: ./infrastructure
+      artifactName:
+        required: false
+        type: string
+        default: infrastructure
+
+jobs:
+  build-cdk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+          cache-dependency-path: ${{ inputs.workingDirectory }}/package-lock.json
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@makerxstudio"
+          cache: "npm"
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.workingDirectory }}
+        run: npm ci --ignore-scripts
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+
+      - name: Build package
+        working-directory: ${{ inputs.workingDirectory }}
+        run: npm run build
+        shell: bash
+
+      - name: Zip build folder
+        if: ${{ inputs.artifactName }}
+        run: pushd build; zip -q -r ../${{ inputs.artifactName }}.zip *
+        working-directory: ${{ inputs.workingDirectory }}
+        shell: bash
+
+      - name: Upload artifact
+        if: ${{ inputs.artifactName }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.artifactName }}
+          path: ${{ inputs.workingDirectory }}/${{ inputs.artifactName }}.zip
+          if-no-files-found: error
