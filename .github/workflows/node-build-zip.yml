@@ -1,11 +1,15 @@
 on:
   workflow_call:
     inputs:
-      nodeVersion:
+      node-version:
         required: false
         type: string
         default: 16.x
-      artifactName:
+      working-directory:
+        required: false
+        type: string
+        default: ./
+      artifact-name:
         required: false
         type: string
         default: node-app
@@ -26,21 +30,37 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@makerxstudio'
           cache: 'npm'
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ github.token }}
 
-      - run: npm ci --ignore-scripts
+      - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: npm ci --ignore-scripts
+        shell: bash
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm rebuild && npm run prepare --if-present
+          NODE_AUTH_TOKEN: ${{ github.token }}
 
-      - run: npm run build
+      - name: Prepare package
+        working-directory: ${{ inputs.working-directory }}
+        run: npm run prepare --if-present
+        shell: bash
+      - name: Build package
+        working-directory: ${{ inputs.working-directory }}
+        run: npm run build
+        shell: bash
 
-      - name: Zip
-        run: pushd build && zip ../node-app.zip . -r && popd
+      - name: Zip build folder
+        if: ${{ inputs.artifact-name }}
+        run: pushd build; zip -q -r ../${{ inputs.artifact-name }}.zip *
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
 
-      - name: Upload artifact for deployment job
+      - name: Upload artifact
+        if: ${{ inputs.artifact-name }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ inputs.artifactName }}
-          path: node-app.zip
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.working-directory }}/${{ inputs.artifact-name }}.zip
+          if-no-files-found: error
