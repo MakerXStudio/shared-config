@@ -1,11 +1,11 @@
 on:
   workflow_call:
     inputs:
-      workingDirectory:
+      working-directory:
         required: false
         type: string
         default: ./infrastructure
-      artifactName:
+      artifact-name:
         required: false
         type: string
         default: infrastructure
@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: lts/*
-          cache-dependency-path: ${{ inputs.workingDirectory }}/package-lock.json
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
           registry-url: "https://npm.pkg.github.com"
           scope: "@makerxstudio"
           cache: "npm"
@@ -31,27 +31,27 @@ jobs:
           NODE_AUTH_TOKEN: ${{ github.token }}
 
       - name: Install dependencies
-        working-directory: ${{ inputs.workingDirectory }}
+        working-directory: ${{ inputs.working-directory }}
         run: npm ci --ignore-scripts
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
 
       - name: Build package
-        working-directory: ${{ inputs.workingDirectory }}
+        working-directory: ${{ inputs.working-directory }}
         run: npm run build
         shell: bash
 
       - name: Zip build folder
-        if: ${{ inputs.artifactName }}
-        run: pushd build; zip -q -r ../${{ inputs.artifactName }}.zip *
-        working-directory: ${{ inputs.workingDirectory }}
+        if: ${{ inputs.artifact-name }}
+        run: pushd build; zip -q -r ../${{ inputs.artifact-name }}.zip *
+        working-directory: ${{ inputs.working-directory }}
         shell: bash
 
       - name: Upload artifact
-        if: ${{ inputs.artifactName }}
+        if: ${{ inputs.artifact-name }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ inputs.artifactName }}
-          path: ${{ inputs.workingDirectory }}/${{ inputs.artifactName }}.zip
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.working-directory }}/${{ inputs.artifact-name }}.zip
           if-no-files-found: error
