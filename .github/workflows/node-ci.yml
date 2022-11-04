@@ -30,14 +30,14 @@ on:
         type: boolean
         default: false
 
-defaults:
-  run:
-    shell: bash
-    working-directory: ${{ inputs.working-directory }}
-
 jobs:
   node-ci:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
 
     strategy:
       matrix:
