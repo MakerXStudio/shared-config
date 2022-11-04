@@ -36,7 +36,7 @@ runs:
       shell: bash
 
     - name: Unzip app folder
-      run: unzip -q ./artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ./${{ inputs.app-artifact-name }}
+      run: unzip -q ./artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ./${{ inputs.app-artifact-name }}/build
       shell: bash
 
     # Unfortunately, the symlinks in node_modules/.bin aren't retained as part of artifact copying so we need to reconstruct them
