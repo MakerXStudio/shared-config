@@ -19,7 +19,7 @@ on:
         default: node-app
 
 jobs:
-  build-zip:
+  build:
     runs-on: ubuntu-latest
 
     defaults:
