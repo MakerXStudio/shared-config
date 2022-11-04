@@ -1,11 +1,11 @@
 on:
   workflow_call:
     inputs:
-      nodeVersion:
+      node-version:
         required: false
         type: string
         default: 16.x
-      packagePath:
+      package-path:
         required: false
         type: string
         default: './dist/package.json'
@@ -19,19 +19,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js ${{ inputs.nodeVersion }}
+      # setup node + private repo access
+      - name: Use Node.js ${{ inputs.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ inputs.nodeVersion }}
+          node-version: ${{ inputs.node-version }}
           registry-url: 'https://npm.pkg.github.com'
           scope: '@makerxstudio'
           cache: 'npm'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
       - run: npm run build
@@ -40,6 +41,6 @@ jobs:
         uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          package: ${{ inputs.packagePath }}
+          package: ${{ inputs.package-path }}
           check-version: true
           registry: 'https://npm.pkg.github.com'
