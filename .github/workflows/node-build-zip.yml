@@ -8,7 +8,7 @@ on:
       working-directory:
         required: false
         type: string
-        default: ./
+        default: '.'
       artifact-name:
         required: false
         type: string
@@ -17,45 +17,44 @@ on:
 jobs:
   build-zip:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Use Node.js ${{ inputs.nodeVersion }}
+      # setup node + private repo access
+      - name: Use Node.js ${{ inputs.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ inputs.nodeVersion }}
+          node-version: ${{ inputs.node-version }}
           registry-url: 'https://npm.pkg.github.com'
           scope: '@makerxstudio'
           cache: 'npm'
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
+      # run npm ci preventing script access to npm auth token
+      - run: npm ci --ignore-scripts
         env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # allow scripts to run without npm auth token
+      - run: npm rebuild && npm run prepare --if-present
 
-      - name: Install dependencies
-        working-directory: ${{ inputs.working-directory }}
-        run: npm ci --ignore-scripts
-        shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
-
-      - name: Prepare package
-        working-directory: ${{ inputs.working-directory }}
+      - name: Prepare
         run: npm run prepare --if-present
-        shell: bash
-      - name: Build package
-        working-directory: ${{ inputs.working-directory }}
+
+      - name: Build
         run: npm run build
-        shell: bash
 
       - name: Zip build folder
         if: ${{ inputs.artifact-name }}
         run: pushd build; zip -q -r ../${{ inputs.artifact-name }}.zip *
-        working-directory: ${{ inputs.working-directory }}
-        shell: bash
 
       - name: Upload artifact
         if: ${{ inputs.artifact-name }}
