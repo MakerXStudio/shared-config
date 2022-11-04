@@ -22,6 +22,10 @@ inputs:
     description: Name of app artifact
     default: node-app
     required: false
+  app-build-folder:
+    description: Subfolder to which the app artifact is unzipped to
+    required: false
+    default: build
 
 runs:
   using: composite
@@ -36,7 +40,9 @@ runs:
       shell: bash
 
     - name: Unzip app folder
-      run: unzip -q ./artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ./${{ inputs.app-artifact-name }}/build
+      run: |
+        mkdir ./${{ inputs.app-artifact-name }}/${{ inputs.app-build-folder }}
+        unzip -q ./artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ./${{ inputs.app-artifact-name }}/${{ inputs.app-build-folder }}
       shell: bash
 
     # Unfortunately, the symlinks in node_modules/.bin aren't retained as part of artifact copying so we need to reconstruct them
