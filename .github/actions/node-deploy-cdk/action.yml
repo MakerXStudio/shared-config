@@ -78,10 +78,20 @@ runs:
 
     - name: CDK deploy
       shell: bash
-      run: npm run deploy
+      run: npm run deploy --if-present
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+
+    - name: CDK deploy infra
+      shell: bash
+      run: npm run deploy-infra --if-present
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+
+    - name: CDK deploy app
+      shell: bash
+      run: npm run deploy-app --if-present
       working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: Set secrets
       shell: bash
-      run: npm run set-secrets
+      run: npm run set-secrets --if-present
       working-directory: ./${{ inputs.infrastructure-artifact-name }}
