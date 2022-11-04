@@ -71,19 +71,14 @@ runs:
       run: npm run bootstrap
       working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
-    - name: CDK synthesize
-      shell: bash
-      run: npm run synth
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
-
     - name: CDK diff
       shell: bash
       run: npm run diff
       working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
-    - name: CDK deploy infra
+    - name: CDK deploy
       shell: bash
-      run: npm run deploy-infra
+      run: npm run deploy
       working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: Set secrets
