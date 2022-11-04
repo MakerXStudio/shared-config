@@ -20,7 +20,7 @@ on:
       audit-script:
         required: false
         type: string
-        default: npm run audit --if-present
+        default: npm audit
       build-script:
         required: false
         type: string
