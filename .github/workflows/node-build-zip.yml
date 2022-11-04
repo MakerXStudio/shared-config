@@ -9,6 +9,10 @@ on:
         required: false
         type: string
         default: '.'
+      build-path:
+        required: false
+        type: string
+        default: build
       artifact-name:
         required: false
         type: string
@@ -54,7 +58,7 @@ jobs:
 
       - name: Zip build folder
         if: ${{ inputs.artifact-name }}
-        run: pushd build; zip -q -r ../${{ inputs.artifact-name }}.zip *
+        run: pushd ${{ inputs.build-path }}; zip -q -r ../${{ inputs.artifact-name }}.zip *
 
       - name: Upload artifact
         if: ${{ inputs.artifact-name }}
