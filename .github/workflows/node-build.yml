@@ -1,0 +1,65 @@
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: 16.x
+      working-directory:
+        required: false
+        type: string
+        default: ''
+      output-path:
+        required: false
+        type: string
+        default: build
+      artifact-name:
+        required: false
+        type: string
+        default: node-app
+
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # setup node + private repo access
+      - name: Use Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@makerxstudio'
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      # run npm ci preventing script access to npm auth token
+      - run: npm ci --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # allow scripts to run without npm auth token
+      - run: npm rebuild && npm run prepare --if-present
+
+      - name: Prepare
+        run: npm run prepare --if-present
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload artifact
+        if: ${{ inputs.artifact-name }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.output-folder }}
+          if-no-files-found: error
