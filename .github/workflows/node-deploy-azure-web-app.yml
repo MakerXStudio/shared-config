@@ -2,22 +2,22 @@ name: deploy-web-app
 on:
   workflow_call:
     inputs:
-      nodeVersion:
+      node-version:
         required: false
         type: string
         default: 16.x
-      webAppName:
+      web-app-name:
         required: true
         type: string
-      artifactName:
+      artifact-name:
         required: false
         type: string
-        default: 'node-app'
-      artifactFileName:
+        default: node-app
+      artifact-file-name:
         required: false
         type: string
         default: 'node-app.zip'
-      environmentName:
+      environment-name:
         required: false
         default: 'Development'
         type: string
@@ -26,17 +26,17 @@ on:
         required: true
 
 env:
-  AZURE_WEBAPP_NAME: ${{ inputs.webAppName }}
-  NODE_VERSION: ${{ inputs.nodeVersion }}
+  AZURE_WEBAPP_NAME: ${{ inputs.web-app-name }}
+  NODE_VERSION: ${{ inputs.node-version }}
 
 jobs:
   deploy-azure-web-app:
-    name: ${{ inputs.environmentName }}
+    name: ${{ inputs.environment-name }}
     permissions:
       contents: none
     runs-on: ubuntu-latest
     environment:
-      name: ${{ inputs.environmentName }}
+      name: ${{ inputs.environment-name }}
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
@@ -51,4 +51,4 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ${{ inputs.artifactFileName }}
+          package: ${{ inputs.artifact-file-name }}
