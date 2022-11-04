@@ -1,6 +1,10 @@
 on:
   workflow_call:
     inputs:
+      node-version:
+        required: false
+        type: string
+        default: 16.x
       working-directory:
         required: false
         type: string
@@ -39,10 +43,6 @@ jobs:
         shell: bash
         working-directory: ${{ inputs.working-directory }}
 
-    strategy:
-      matrix:
-        node-version: [16.x]
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -50,10 +50,10 @@ jobs:
           fetch-depth: 0
 
       # setup node + private repo access
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ inputs.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ inputs.node-version }}
           registry-url: 'https://npm.pkg.github.com'
           scope: '@makerxstudio'
           cache: 'npm'
