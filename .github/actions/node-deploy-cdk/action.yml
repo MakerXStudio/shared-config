@@ -41,7 +41,7 @@ runs:
 
     - name: Unzip app folder
       run: |
-        mkdir ./${{ inputs.app-artifact-name }}/${{ inputs.app-build-folder }}
+        mkdir -p ./${{ inputs.app-artifact-name }}/${{ inputs.app-build-folder }}
         unzip -q ./artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ./${{ inputs.app-artifact-name }}/${{ inputs.app-build-folder }}
       shell: bash
 
