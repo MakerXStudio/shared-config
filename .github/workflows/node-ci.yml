@@ -1,26 +1,39 @@
 on:
   workflow_call:
     inputs:
-      lintScript:
+      working-directory:
+        required: false
+        type: string
+        default: ./
+      lint-script:
         required: false
         type: string
         default: npm run lint --if-present
-      compileScript:
+      compile-script:
         required: false
         type: string
         default: npm run check-types --if-present
-      testScript:
+      test-script:
         required: false
         type: string
         default: npm run test --if-present
-      auditScript:
+      audit-script:
         required: false
         type: string
         default: npm run audit --if-present
-      buildScript:
+      build-script:
         required: false
         type: string
-        default: npm run build --if-present
+        default: npm run build
+      run-build:
+        required: false
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ${{ inputs.lint-script }}
 
 jobs:
   node-ci:
@@ -53,10 +66,11 @@ jobs:
       - run: npm rebuild && npm run prepare --if-present
 
       # run all the CI scripts
-      - run: ${{ inputs.lintScript }}
-      - run: ${{ inputs.compileScript }}
-      - run: ${{ inputs.testScript }}
-      - run: ${{ inputs.auditScript }}
-      - run: ${{ inputs.buildScript }}
+      - run: ${{ inputs.lint-script }}
+      - run: ${{ inputs.compile-script }}
+      - run: ${{ inputs.test-script }}
+      - run: ${{ inputs.audit-script }}
+      - if: ${{ inputs.run-build }}
+        run: ${{ inputs.build-script }}
 
       
