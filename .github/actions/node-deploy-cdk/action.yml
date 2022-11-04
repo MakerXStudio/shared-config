@@ -1,54 +1,42 @@
-name: "Deploy CDK"
-description: "Deploy CDK"
+name: Deploy CDK
+description: Deploy CDK
 inputs:
-  working-directory:
-    description: "Working directory"
-    default: "./deploy"
+  node-version:
+    description: Node.js version to use
     required: false
+    default: 16.x
   aws-access-key-id:
-    description: "AWS Access Key ID"
+    description: AWS Access Key ID
     required: true
   aws-secret-access-key:
-    description: "AWS Access Key Secret"
+    description: AWS Access Key Secret
     required: true
   aws-region:
-    description: "AWS region to deploy to"
+    description: AWS region to deploy to
     required: true
   infrastructure-artifact-name:
-    description: "Name of artifact created during CDK build"
+    description: Name of infrastructure artifact
     default: infrastructure
     required: false
   app-artifact-name:
-    description: "Name of artifact created during app build"
+    description: Name of app artifact
     default: node-app
     required: false
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Download artifacts
       uses: actions/download-artifact@v3
       with:
-        path: ${{ inputs.working-directory }}/artifacts
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: lts/*
-
-    - name: Configure aws credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ inputs.aws-access-key-id }}
-        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
-        aws-region: ${{ inputs.aws-region }}
+        path: ./artifacts
 
     - name: Unzip infrastructure folder
-      run: unzip -q ${{ inputs.working-directory }}/artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ${{ inputs.working-directory }}/infrastructure
+      run: unzip -q ./artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ./${{ inputs.infrastructure-artifact-name }}
       shell: bash
 
     - name: Unzip app folder
-      run: unzip -q ${{ inputs.working-directory }}/artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ${{ inputs.working-directory }}/build
+      run: unzip -q ./artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ./${{ inputs.app-artifact-name }}
       shell: bash
 
     # Unfortunately, the symlinks in node_modules/.bin aren't retained as part of artifact copying so we need to reconstruct them
@@ -58,29 +46,41 @@ runs:
         ln -s ../aws-cdk/bin/cdk node_modules/.bin/cdk -f
         ln -s ../cross-env/src/bin/cross-env-shell.js node_modules/.bin/cross-env-shell -f
         chmod -R a+x node_modules
-      working-directory: ${{ inputs.working-directory }}/infrastructure
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+
+    - name: Use Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
 
     - name: CDK bootstrap
       shell: bash
       run: npm run bootstrap
-      working-directory: ${{ inputs.working-directory }}/infrastructure
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK synthesize
       shell: bash
       run: npm run synth
-      working-directory: ${{ inputs.working-directory }}/infrastructure
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK diff
       shell: bash
       run: npm run diff
-      working-directory: ${{ inputs.working-directory }}/infrastructure
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK deploy infra
       shell: bash
       run: npm run deploy-infra
-      working-directory: ${{ inputs.working-directory }}/infrastructure
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: Set secrets
       shell: bash
       run: npm run set-secrets
-      working-directory: ${{ inputs.working-directory }}/infrastructure
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
