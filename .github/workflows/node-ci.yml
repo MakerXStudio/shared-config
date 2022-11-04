@@ -57,6 +57,7 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@makerxstudio'
           cache: 'npm'
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
