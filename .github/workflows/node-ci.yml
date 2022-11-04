@@ -17,6 +17,10 @@ on:
         required: false
         type: string
         default: npm run audit --if-present
+      buildScript:
+        required: false
+        type: string
+        default: npm run build --if-present
 
 jobs:
   node-ci:
@@ -53,5 +57,6 @@ jobs:
       - run: ${{ inputs.compileScript }}
       - run: ${{ inputs.testScript }}
       - run: ${{ inputs.auditScript }}
+      - run: ${{ inputs.buildScript }}
 
       
