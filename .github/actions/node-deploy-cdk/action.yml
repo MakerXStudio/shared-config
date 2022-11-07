@@ -18,14 +18,15 @@ inputs:
     description: Name of infrastructure artifact
     default: infrastructure
     required: false
-  app-artifact-name:
-    description: Name of app artifact
-    default: node-app
+  app-artifact-unzips:
+    description: |
+      One or more (lines) of colon-separated pairs, indicating A) artifact name B) destination folder where the artifact is unzipped prior to running CDK commands. E.g.:
+      app-artifact-unzips: | 
+        website:website/build
+        app:app/dist
+        poller:poller/build
+    default: website:website/build
     required: false
-  app-build-folder:
-    description: Subfolder to which the app artifact is unzipped to
-    required: false
-    default: build
 
 runs:
   using: composite
@@ -35,14 +36,21 @@ runs:
       with:
         path: ./artifacts
 
-    - name: Unzip infrastructure folder
+    - name: Unzip infrastructure artifact
       run: unzip -q ./artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ./${{ inputs.infrastructure-artifact-name }}
       shell: bash
 
-    - name: Unzip app folder
+    - name: Unzip app artifacts
       run: |
-        mkdir -p ./${{ inputs.app-artifact-name }}/${{ inputs.app-build-folder }}
-        unzip -q ./artifacts/${{ inputs.app-artifact-name }}/${{ inputs.app-artifact-name }}.zip -d ./${{ inputs.app-artifact-name }}/${{ inputs.app-build-folder }}
+        readarray -t lines <<<"${{ app-artifact-unzips }}"
+        for i in "${!lines[@]}"
+        do
+          trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          IFS=':' read -ra pair <<< "$trimmed"
+          echo "$i ${pair[0]}=>${pair[1]}"
+          mkdir -p "./${pair[1]}"
+          unzip -q "./artifacts/${pair[0]}/${pair[0]}.zip" -d "./${pair[1]}"
+        done
       shell: bash
 
     # Unfortunately, the symlinks in node_modules/.bin aren't retained as part of artifact copying so we need to reconstruct them
