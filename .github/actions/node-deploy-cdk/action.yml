@@ -42,7 +42,7 @@ runs:
 
     - name: Unzip app artifacts
       run: |
-        readarray -t lines <<<"${{ app-artifact-unzips }}"
+        readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
         for i in "${!lines[@]}"
         do
           trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
