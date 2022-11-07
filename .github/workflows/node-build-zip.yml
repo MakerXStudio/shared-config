@@ -17,6 +17,9 @@ on:
         required: false
         type: string
         default: node-app
+      npm-token:
+        description: "Auth token to fetch private packages"
+        required: false
 
 jobs:
   build-zip:
@@ -46,7 +49,7 @@ jobs:
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ inputs.npm-token || secrets.GITHUB_TOKEN }}
       # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
