@@ -47,7 +47,6 @@ runs:
         do
           trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
           IFS=':' read -ra pair <<< "$trimmed"
-          echo "$i ${pair[0]}=>${pair[1]}"
           mkdir -p "./${pair[1]}"
           unzip -q "./artifacts/${pair[0]}/${pair[0]}.zip" -d "./${pair[1]}"
         done
