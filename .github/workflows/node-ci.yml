@@ -1,5 +1,9 @@
 on:
   workflow_call:
+    secrets:
+      GITHUB_TOKEN:
+        description: 'A token passed from the caller workflow'
+        required: false
     inputs:
       node-version:
         required: false
