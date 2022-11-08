@@ -34,16 +34,16 @@ runs:
     - name: Download artifacts
       uses: actions/download-artifact@v3
       with:
-        path: ./artifacts
+        path: artifacts
 
     - name: Unzip infrastructure artifact
-      run: unzip -q ./artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ./${{ inputs.infrastructure-artifact-name }}
+      run: unzip -q artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ${{ inputs.infrastructure-artifact-name }}
       shell: bash
 
     - name: Rebuild infrastructure node_modules
       shell: bash
       run: npm rebuild && npm run prepare --if-present
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
 
     - name: Unzip app artifacts
       run: |
@@ -52,8 +52,8 @@ runs:
         do
           trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
           IFS=':' read -ra pair <<< "$trimmed"
-          mkdir -p "./${pair[1]}"
-          unzip -q "./artifacts/${pair[0]}/${pair[0]}.zip" -d "./${pair[1]}"
+          mkdir -p "${pair[1]}"
+          unzip -q "artifacts/${pair[0]}/${pair[0]}.zip" -d "${pair[1]}"
         done
       shell: bash
 
@@ -72,34 +72,29 @@ runs:
     - name: CDK bootstrap
       shell: bash
       run: npm run bootstrap
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK diff
       shell: bash
       run: npm run diff
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
-
-    - name: CDK diagram
-      shell: bash
-      run: npm run graph
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK deploy
       shell: bash
       run: npm run deploy --if-present
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK deploy infra
       shell: bash
       run: npm run deploy-infra --if-present
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK deploy app
       shell: bash
       run: npm run deploy-app --if-present
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
 
     - name: Set secrets
       shell: bash
       run: npm run set-secrets --if-present
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
