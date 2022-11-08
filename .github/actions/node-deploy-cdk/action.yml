@@ -40,6 +40,11 @@ runs:
       run: unzip -q ./artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ./${{ inputs.infrastructure-artifact-name }}
       shell: bash
 
+    - name: Rebuild infrastructure node_modules
+      shell: bash
+      run: npm rebuild && npm run prepare --if-present
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+
     - name: Unzip app artifacts
       run: |
         readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
@@ -51,15 +56,6 @@ runs:
           unzip -q "./artifacts/${pair[0]}/${pair[0]}.zip" -d "./${pair[1]}"
         done
       shell: bash
-
-    # Unfortunately, the symlinks in node_modules/.bin aren't retained as part of artifact copying so we need to reconstruct them
-    - name: Fix symlinks
-      shell: bash
-      run: |
-        ln -s ../aws-cdk/bin/cdk node_modules/.bin/cdk -f
-        ln -s ../cross-env/src/bin/cross-env-shell.js node_modules/.bin/cross-env-shell -f
-        chmod -R a+x node_modules
-      working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: Use Node.js ${{ inputs.node-version }}
       uses: actions/setup-node@v3
@@ -81,6 +77,11 @@ runs:
     - name: CDK diff
       shell: bash
       run: npm run diff
+      working-directory: ./${{ inputs.infrastructure-artifact-name }}
+
+    - name: CDK diagram
+      shell: bash
+      run: npm run graph
       working-directory: ./${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK deploy
