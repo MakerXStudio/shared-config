@@ -57,7 +57,6 @@ jobs:
         run: npm run build
 
       - name: Upload artifact
-        if: ${{ inputs.artifact-name }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.artifact-name }}
