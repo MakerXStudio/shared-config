@@ -72,9 +72,18 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - if: ${{ inputs.pre-deploy-command }}
-      name: Run pre-deploy command
-      run: ${{ inputs.pre-deploy-command }}
+    - if: ${{ inputs.static-site-config-transforms }}
+      name: Run static site config transforms
+      run: |
+        readarray -t transforms <<<"${{ inputs.static-site-config-transforms }}"
+        find ./website -type f \( -name '*.js' -o -name '*.html' \) -exec bash -c '
+          for i in "${!transforms[@]}"
+          do
+            trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            IFS=':' read -ra pair <<< "$trimmed"
+            sed -i "s/${pair[0]}/$(echo '${pair[1]}' | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI" $0
+          done
+        ' "{}" \;
       shell: bash
 
     - name: CDK bootstrap
