@@ -27,6 +27,9 @@ inputs:
         poller:poller/build
     default: website:website/build
     required: false
+  pre-deploy-command:
+    description: Optional command to execute prior to package deployment
+    required: false
 
 runs:
   using: composite
@@ -68,6 +71,11 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
+
+    - if: ${{ inputs.pre-deploy-command }}
+      name: Run pre-deploy command
+      run: ${{ inputs.pre-deploy-command }}
+      shell: bash
 
     - name: CDK bootstrap
       shell: bash
