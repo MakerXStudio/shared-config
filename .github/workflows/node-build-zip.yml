@@ -8,7 +8,7 @@ on:
       working-directory:
         required: false
         type: string
-        default: '.'
+        default: "."
       build-path:
         required: false
         type: string
@@ -17,6 +17,14 @@ on:
         required: false
         type: string
         default: node-app
+      static-site:
+        required: false
+        type: boolean
+        default: false
+      static-site-env-prefix:
+        required: false
+        type: string
+        default: VITE
 
 jobs:
   build-zip:
@@ -38,10 +46,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node-version }}
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@makerxstudio'
-          cache: 'npm'
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@makerxstudio"
+          cache: "npm"
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      # prepare static sites for config transformation upon later deployment
+      - if: ${{ inputs.static-site }}
+        run: sed -n 's/${{ inputs.static-site-env-prefix }}_\([A-Z0-9_]\+\)=\(.*\)/\1=#{\1}#/p' .env.sample > .env
 
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
