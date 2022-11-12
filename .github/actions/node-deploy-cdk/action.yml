@@ -55,6 +55,23 @@ runs:
 
     - name: Unzip app artifacts
       run: |
+        # Configure static site transforms if provided
+        if [ ! -z "${{ inputs.static-site-transforms }}" ]
+        then
+          readarray -t transforms <<<"${{ inputs.static-site-transforms }}"
+          replacements=""
+          for i in "${!transforms[@]}"
+          do
+            trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            IFS=':' read -r placeholder value <<< "$trimmed"
+            if [ ! -z "$placeholder" ]
+            then
+              replacements+="s/$placeholder/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
+            fi
+          done
+        fi
+
+        # Extract app artifacts
         readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
         for i in "${!lines[@]}"
         do
@@ -62,6 +79,12 @@ runs:
           IFS=':' read -ra pair <<< "$trimmed"
           mkdir -p "${pair[1]}"
           unzip -q "artifacts/${pair[0]}/${pair[0]}.zip" -d "${pair[1]}"
+
+          # Apply static site transforms if provided 
+          if [ ! -z "$replacements" ]
+          then
+            find "${pair[1]}" -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "$replacements" {} \;
+          fi
         done
       shell: bash
 
@@ -76,20 +99,6 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
-
-    - if: ${{ inputs.static-site-transforms }}
-      name: Run static site transforms
-      run: |
-        readarray -t transforms <<<"${{ inputs.static-site-transforms }}"
-        find ./website -type f \( -name '*.js' -o -name '*.html' \) -exec bash -c '
-          for i in "${!transforms[@]}"
-          do
-            trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-            IFS=':' read -ra pair <<< "$trimmed"
-            sed -i "s/${pair[0]}/$(echo '${pair[1]}' | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI" $0
-          done
-        ' "{}" \;
-      shell: bash
 
     - name: CDK bootstrap
       shell: bash
