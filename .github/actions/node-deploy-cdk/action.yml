@@ -31,9 +31,9 @@ inputs:
     description: |
       One or more (lines) of colon-separated pairs, indicating A) placeholder variable value used in static site build B) secret value to replace placeholder value with throughout the build E.g.:
       static-site-transforms: | 
-        #{MAKER_GRAPH_API_ENDPOINT}#:${{ secrets.MAKER_GRAPH_API_ENDPOINT }}
-        #{CLIENT_ID}#:${{ secrets.CLIENT_ID }}
-        #{TENANT_ID}#:${{ secrets.TENANT_ID }}
+        #{MAKER_GRAPH_API_ENDPOINT}#:SECRET VALUE
+        #{CLIENT_ID}#:SECRET VALUE
+        #{TENANT_ID}#:SECRET VALUE
     required: false
 
 runs:
