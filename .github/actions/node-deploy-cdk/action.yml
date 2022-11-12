@@ -31,9 +31,9 @@ inputs:
     description: |
       One or more (lines) of colon-separated pairs, indicating A) placeholder variable value used in static site build B) secret value to replace placeholder value with throughout the build E.g.:
       static-site-transforms: | 
-        #{MAKER_GRAPH_API_ENDPOINT}#:SECRET VALUE
-        #{CLIENT_ID}#:SECRET VALUE
-        #{TENANT_ID}#:SECRET VALUE
+        VITE_MAKER_GRAPH_API_ENDPOINT:SECRET VALUE
+        VITE_CLIENT_ID:SECRET VALUE
+        VITE_TENANT_ID:SECRET VALUE
     required: false
 
 runs:
@@ -66,7 +66,7 @@ runs:
             IFS=':' read -r placeholder value <<< "$trimmed"
             if [ ! -z "$placeholder" ]
             then
-              replacements+="s/$placeholder/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
+              replacements+="s/#{$placeholder}#/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
             fi
           done
         fi
