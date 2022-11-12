@@ -27,8 +27,13 @@ inputs:
         poller:poller/build
     default: website:website/build
     required: false
-  pre-deploy-command:
-    description: Optional command to execute prior to package deployment
+  static-site-transforms:
+    description: |
+      One or more (lines) of colon-separated pairs, indicating A) placeholder variable value used in static site build B) secret value to replace placeholder value with throughout the build E.g.:
+      static-site-transforms: | 
+        #{MAKER_GRAPH_API_ENDPOINT}#:${{ secrets.MAKER_GRAPH_API_ENDPOINT }}
+        #{CLIENT_ID}#:${{ secrets.CLIENT_ID }}
+        #{TENANT_ID}#:${{ secrets.TENANT_ID }}
     required: false
 
 runs:
@@ -72,10 +77,10 @@ runs:
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
-    - if: ${{ inputs.static-site-config-transforms }}
-      name: Run static site config transforms
+    - if: ${{ inputs.static-site-transforms }}
+      name: Run static site transforms
       run: |
-        readarray -t transforms <<<"${{ inputs.static-site-config-transforms }}"
+        readarray -t transforms <<<"${{ inputs.static-site-transforms }}"
         find ./website -type f \( -name '*.js' -o -name '*.html' \) -exec bash -c '
           for i in "${!transforms[@]}"
           do
