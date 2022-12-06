@@ -1,0 +1,51 @@
+name: Build Docker
+description: Builds a Docker image, uploads gzipped tar artifact
+
+inputs:
+  working-directory:
+    description: Working directory
+    required: false
+    default: .
+  image-label:
+    description: Image label, used as tag prefix (my-api:latest), file (my-api.tar,my-api.gz) and artifact name (my-api-docker-image)
+    required: true
+  image-tag:
+    description: Docker image tag, e.g. 'latest' (default) or a version number
+    required: false
+    default: latest
+  # npm-token:
+  #   description: NPM token to fetch private packages
+  #   required: false
+
+# Why not use the official docker GitHub actions?
+# Well, they only support buildx, which only supports BuildKit, which doesn't support verifying the authenticity
+# of images with Docker Content Trust https://github.com/docker/buildx/issues/987
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Build
+      shell: bash
+      env:
+        DOCKER_BUILDKIT: '0'
+        NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      working-directory: ${{ inputs.working-directory }}/
+      run: docker build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} --disable-content-trust=false  . --build-arg NPM_TOKEN=$NPM_TOKEN
+
+    - name: Export
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/
+      run: docker save --output ${{ inputs.image-label }}.tar ${{ inputs.image-label }}:${{ inputs.image-tag }}
+
+    - name: Compress docker image
+      run: gzip ${{ inputs.image-label }}.tar
+      working-directory: ${{ inputs.working-directory }}/
+      shell: bash
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.image-label }}-docker-image
+        path: ${{ inputs.working-directory }}/${{ inputs.image-label }}.tar.gz
+        if-no-files-found: error
