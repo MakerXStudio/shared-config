@@ -13,9 +13,9 @@ inputs:
     description: Docker image tag, e.g. 'latest' (default) or a version number
     required: false
     default: latest
-  # npm-token:
-  #   description: NPM token to fetch private packages
-  #   required: false
+  npm-token:
+    description: NPM token to fetch private packages
+    required: true
 
 # Why not use the official docker GitHub actions?
 # Well, they only support buildx, which only supports BuildKit, which doesn't support verifying the authenticity
@@ -29,7 +29,7 @@ runs:
       shell: bash
       env:
         DOCKER_BUILDKIT: '0'
-        NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ inputs.npm-token }}
       working-directory: ${{ inputs.working-directory }}/
       run: docker build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} --disable-content-trust=false  . --build-arg NPM_TOKEN=$NPM_TOKEN
 
