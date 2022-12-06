@@ -67,15 +67,15 @@ jobs:
       - run: npm rebuild && npm run prepare --if-present
 
       # run all the CI scripts
-      - name: lint
+      - name: Lint
         run: ${{ inputs.lint-script }}
-      - name: compile
+      - name: Compile
         run: ${{ inputs.compile-script }}
-      - name: test
+      - name: Test
         run: ${{ inputs.test-script }}
-      - name: audit
+      - name: Audit
         run: ${{ inputs.audit-script }}
-      - name: build
+      - name: Build
         if: ${{ inputs.run-build }}
         run: ${{ inputs.build-script }}
 
