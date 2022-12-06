@@ -7,7 +7,7 @@ inputs:
     required: false
     default: .
   image-label:
-    description: Image label, used as tag prefix (my-api:latest), file (my-api.tar,my-api.gz) and artifact name (my-api-docker-image)
+    description: Image label, used as tag prefix (my-api:latest), file (my-api-image.tar,my-api-image.gz) and artifact name (my-api-image)
     required: true
   image-tag:
     description: Docker image tag, e.g. 'latest' (default) or a version number
