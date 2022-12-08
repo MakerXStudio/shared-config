@@ -128,7 +128,7 @@ runs:
     - name: Run DB Migrations
       shell: bash
       run: npm run invoke-migrate-db --if-present
-      working-directory: ${{ inputs.working-directory }}/infrastructure
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
 
     - name: CDK deploy app
       shell: bash
