@@ -30,7 +30,7 @@ inputs:
   static-site-transforms:
     description: |
       One or more (lines) of colon-separated pairs, indicating A) placeholder variable value used in static site build B) secret value to replace placeholder value with throughout the build E.g.:
-      static-site-transforms: | 
+      static-site-transforms: |-
         VITE_MAKER_GRAPH_API_ENDPOINT:SECRET VALUE
         VITE_CLIENT_ID:SECRET VALUE
         VITE_TENANT_ID:SECRET VALUE
@@ -120,12 +120,17 @@ runs:
       run: npm run deploy-infra --if-present
       working-directory: ${{ inputs.infrastructure-artifact-name }}
 
-    - name: CDK deploy app
-      shell: bash
-      run: npm run deploy-app --if-present
-      working-directory: ${{ inputs.infrastructure-artifact-name }}
-
     - name: Set secrets
       shell: bash
       run: npm run set-secrets --if-present
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
+
+    - name: Run DB Migrations
+      shell: bash
+      run: npm run invoke-migrate-db --if-present
+      working-directory: ${{ inputs.working-directory }}/infrastructure
+
+    - name: CDK deploy app
+      shell: bash
+      run: npm run deploy-app --if-present
       working-directory: ${{ inputs.infrastructure-artifact-name }}
