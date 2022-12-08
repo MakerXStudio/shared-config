@@ -39,7 +39,7 @@ runs:
       run: docker save --output ${{ inputs.image-label }}.tar ${{ inputs.image-label }}:${{ inputs.image-tag }}
 
     - name: Compress docker image
-      run: zip ${{ inputs.image-label }}.zip ${{ inputs.image-label }}.tar
+      run: zip ${{ inputs.image-label }}-docker-image.zip ${{ inputs.image-label }}.tar
       working-directory: ${{ inputs.working-directory }}/
       shell: bash
 
@@ -47,5 +47,5 @@ runs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.image-label }}-docker-image
-        path: ${{ inputs.working-directory }}/${{ inputs.image-label }}.tar.gz
+        path: ${{ inputs.working-directory }}/${{ inputs.image-label }}-docker-image.zip
         if-no-files-found: error
