@@ -39,7 +39,7 @@ runs:
       run: docker save --output ${{ inputs.image-label }}.tar ${{ inputs.image-label }}:${{ inputs.image-tag }}
 
     - name: Compress docker image
-      run: gzip ${{ inputs.image-label }}.tar
+      run: zip ${{ inputs.image-label }}.zip ${{ inputs.image-label }}.tar
       working-directory: ${{ inputs.working-directory }}/
       shell: bash
 
