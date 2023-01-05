@@ -78,5 +78,8 @@ jobs:
       - name: Build
         if: ${{ inputs.run-build }}
         run: ${{ inputs.build-script }}
+        # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       
