@@ -120,7 +120,7 @@ runs:
       run: npm run deploy-infra --if-present
       working-directory: ${{ inputs.infrastructure-artifact-name }}
 
-    - name: Set secrets
+    - name: Set secrets (infra)
       shell: bash
       run: npm run set-secrets --if-present
       working-directory: ${{ inputs.infrastructure-artifact-name }}
@@ -133,4 +133,9 @@ runs:
     - name: CDK deploy app
       shell: bash
       run: npm run deploy-app --if-present
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
+
+    - name: Set secrets (app)
+      shell: bash
+      run: npm run set-secrets --if-present
       working-directory: ${{ inputs.infrastructure-artifact-name }}
