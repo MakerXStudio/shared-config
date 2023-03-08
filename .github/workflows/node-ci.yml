@@ -33,6 +33,10 @@ on:
         required: false
         type: boolean
         default: false
+      npm-auth-token:
+        description: NPM auth token (optional, GITHUB_TOKEN is used by default)
+        type: string
+        required: false
 
 jobs:
   node-ci:
@@ -62,7 +66,7 @@ jobs:
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token || secrets.GITHUB_TOKEN }}
       # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
@@ -80,6 +84,6 @@ jobs:
         run: ${{ inputs.build-script }}
         # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token || secrets.GITHUB_TOKEN }}
 
       
