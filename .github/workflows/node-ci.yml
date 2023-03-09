@@ -33,6 +33,14 @@ on:
         required: false
         type: boolean
         default: false
+      run-commit-lint:
+        required: false
+        type: boolean
+        default: false
+      commit-lint-script:
+        required: false
+        type: string
+        default: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
     secrets:
       npm-auth-token:
         description: NPM auth token (optional, GITHUB_TOKEN is used by default)
@@ -71,6 +79,9 @@ jobs:
       - run: npm rebuild && npm run prepare --if-present
 
       # run all the CI scripts
+      - name: 'Commit lint'
+        if: ${{ run-commit-lint }}
+        run: ${{ inputs.commit-lint-script }}
       - name: Lint
         run: ${{ inputs.lint-script }}
       - name: Compile
