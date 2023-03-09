@@ -5,6 +5,9 @@ on:
         required: false
         type: string
         default: 16.x
+      python-version:
+        required: false
+        type: string
       working-directory:
         required: false
         type: string
@@ -17,6 +20,13 @@ on:
         required: false
         type: string
         default: npm run check-types --if-present
+      run-pre-test:
+        required: false
+        type: boolean
+        default: false
+      pre-test-script:
+        required: false
+        type: string
       test-script:
         required: false
         type: string
@@ -41,17 +51,9 @@ on:
         required: false
         type: string
         default: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-      run-semantic-release:
-        required: false
-        type: boolean
-        default: false
-      semantic-release-script:
-        required: false
-        type: string
-        default: npx semantic-release
     secrets:
       npm-auth-token:
-        description: NPM auth token (optional, GITHUB_TOKEN is used by default)
+        description: NPM auth token (don't pass in on a PR build on a public repository)
         required: false
 
 jobs:
@@ -79,10 +81,17 @@ jobs:
           cache: 'npm'
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
+      - name: Use Python ${{ inputs.python-version }}
+        if: ${{ inputs.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: "poetry"
+
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token }}
       # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
@@ -94,6 +103,9 @@ jobs:
         run: ${{ inputs.lint-script }}
       - name: Compile
         run: ${{ inputs.compile-script }}
+      - name: Pre-test
+        if: ${{ inputs.run-pre-test }}
+        run: ${{ inputs.pre-test-script }}
       - name: Test
         run: ${{ inputs.test-script }}
       - name: Audit
@@ -103,10 +115,5 @@ jobs:
         run: ${{ inputs.build-script }}
         # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
-      - name: 'Semantic release'
-        if: ${{ inputs.run-semantic-release }}
-        run: ${{ inputs.semantic-release-script }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.npm-auth-token }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token }}
+
