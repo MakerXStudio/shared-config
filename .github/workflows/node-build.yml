@@ -17,6 +17,10 @@ on:
         required: false
         type: string
         default: node-app
+    secrets:
+      npm-auth-token:
+        description: NPM auth token (optional, GITHUB_TOKEN is used by default)
+        required: false
 
 jobs:
   build:
@@ -46,7 +50,7 @@ jobs:
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
       # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
@@ -57,7 +61,7 @@ jobs:
         run: npm run build
         # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
