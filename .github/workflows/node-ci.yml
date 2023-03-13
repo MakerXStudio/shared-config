@@ -81,7 +81,7 @@ jobs:
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
       # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
@@ -105,5 +105,6 @@ jobs:
         run: ${{ inputs.build-script }}
         # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+          
 
