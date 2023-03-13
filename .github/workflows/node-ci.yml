@@ -17,10 +17,6 @@ on:
         required: false
         type: string
         default: npm run check-types --if-present
-      run-pre-test:
-        required: false
-        type: boolean
-        default: false
       pre-test-script:
         required: false
         type: string
@@ -94,7 +90,7 @@ jobs:
       - name: Compile
         run: ${{ inputs.compile-script }}
       - name: Pre-test
-        if: ${{ inputs.run-pre-test }}
+        if: ${{ inputs.pre-test-script }}
         run: ${{ inputs.pre-test-script }}
       - name: Test
         run: ${{ inputs.test-script }}
