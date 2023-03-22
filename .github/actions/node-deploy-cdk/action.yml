@@ -21,7 +21,7 @@ inputs:
   app-artifact-unzips:
     description: |
       One or more (lines) of colon-separated pairs, indicating A) artifact name B) destination folder where the artifact is unzipped prior to running CDK commands. E.g.:
-      app-artifact-unzips: | 
+      app-artifact-unzips: |-
         website:website/build
         app:app/dist
         poller:poller/build
