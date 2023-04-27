@@ -27,12 +27,12 @@ The workflows can also be reused via [Calling a reusable workflow](https://docs.
 
 ```
 on:
-  issue_comment:
+  issues:
     types: [labeled]
 jobs:
   issue_created:
     uses: makerxstudio/shared-config/.github/workflows/zendesk_integration_issue_labelled.yml@main
-    inputs:
+    with:
       ZENDESK_TENANT_NAME: {tenant_name}
       ISSUE_LABEL: {issue label}
     secrets:
