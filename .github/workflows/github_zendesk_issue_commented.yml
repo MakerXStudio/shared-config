@@ -1,7 +1,5 @@
-name: Add Zendesk comment
+name: Add comment to Zendesk ticket
 on:
-  issue_comment:
-    types: [created]
   workflow_call:
     inputs:
       ZENDESK_TENANT_NAME:
@@ -13,8 +11,8 @@ on:
         description: 'The zendesk basic auth token for authentification. See https://support.zendesk.com/hc/en-us/articles/115000510267-How-can-I-authenticate-API-requests-#heading2'
         required: true
 jobs:
-  issue_commented:
-    name: Issue comment
+  add-ticket-comment:
+    name: Add comment to Zendesk ticket
     if: ${{ !github.event.issue.pull_request }}
     runs-on: ubuntu-latest
     steps:
