@@ -1,0 +1,31 @@
+name: On Zendesk ticket commented
+on:
+  repository_dispatch:
+    types:
+      - zendesk_github_ticket_commented
+jobs:
+  trigger-add-comment-workflow:
+    name: Trigger add comment workflow
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v5
+        id: repo-set
+        with:
+          result-encoding: string
+          script: |
+            // get client payload
+            payload = context.payload.client_payload
+            // split external id to get owner, repo and issue number
+            parts = payload.ticket.external_id.split("/")
+
+            $issue_repo = parts[parts.length - 3]
+            $issue_owner = parts[parts.length - 4]
+
+            return $issue_owner + "/" + $issue_repo
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@c73dcc42429d4220d60b2b8daf3cee190a131129
+        with:
+          token: ${{ secrets.INVOKE_WORKFLOW_TOKEN }}
+          repository: ${{ steps.repo-set.outputs.result }}
+          event-type: zendesk_github_add_comment
+          client-payload: ${{ toJson(github.event.client_payload) }}

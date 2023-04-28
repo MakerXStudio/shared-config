@@ -1,0 +1,30 @@
+name: Add comment to GitHub issue
+on:
+  workflow_call:
+permissions:
+  issues: write
+jobs:
+  add-comment:
+    name: Add comment to issue
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v5
+        with:
+          script: |
+            // copy zendesk comment to issue
+            payload = context.payload.client_payload
+            // split external id to get owner, repo and issue number
+            parts = payload.ticket.external_id.split("/")
+
+            issue_number = parts[parts.length - 1]
+            issue_repo = parts[parts.length - 3]
+            issue_owner = parts[parts.length - 4]
+            
+            comment_author = payload.comment.author.split(" ")[0]
+
+            github.rest.issues.createComment({
+              issue_number: issue_number,
+              owner: issue_owner,
+              repo: issue_repo,
+              body: `${payload.comment.body}\n\n*Comment by ${comment_author}*`
+            })

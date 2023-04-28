@@ -1,0 +1,44 @@
+{
+	"id": "ef95138d-d81d-4ab3-878e-59165dd0ef00",
+	"values": [
+		{
+			"key": "zendesk-tenant-name",
+			"value": "d3v-makerx",
+			"enabled": true
+		},
+		{
+			"key": "zendesk-webhook-id",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "zendesk-auth-token",
+			"value": "",
+			"type": "secret",
+			"enabled": true
+		},
+		{
+			"key": "github-pat",
+			"value": "",
+			"type": "secret",
+			"enabled": true
+		},
+		{
+			"key": "github-owner",
+			"value": "makerxstudio",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "github-repo",
+			"value": "shared-config",
+			"type": "default",
+			"enabled": true
+		}
+	],
+	"name": "Globals",
+	"_postman_variable_scope": "globals",
+	"_postman_exported_at": "2023-04-28T01:17:02.925Z",
+	"_postman_exported_using": "Postman/10.13.4"
+}
