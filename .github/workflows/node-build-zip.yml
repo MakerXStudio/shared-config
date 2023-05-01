@@ -41,7 +41,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build zip
-        uses: ./github/actions/node-build-zip
+        uses: ./.github/actions/node-build-zip
         with:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}

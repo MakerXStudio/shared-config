@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build
-        uses: ./github/actions/node-build
+        uses: ./.github/actions/node-build
         with:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}
