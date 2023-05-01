@@ -87,5 +87,5 @@ runs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.artifact-name }}
-        path: ${{ inputs.working-directory }}/${{ inputs.build-path }}
+        path: ${{ inputs.working-directory }}/${{ inputs.artifact-name }}.zip
         if-no-files-found: error
