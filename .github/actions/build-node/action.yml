@@ -1,0 +1,74 @@
+name: Build Node
+description: Build Node app and upload artifact
+
+inputs:
+  node-version:
+    description: Node version
+    required: false
+    default: 16.x
+  working-directory:
+    description: Working directory
+    required: false
+    default: '.'
+  build-path:
+    description: Build output path
+    required: false
+    default: build
+  artifact-name:
+    description: Artifact name
+    required: false
+    default: node-app
+  npm-auth-token:
+    description: NPM auth token (optional)
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    # setup node + private repo access
+    - name: Use Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: 'https://npm.pkg.github.com'
+        scope: '@makerxstudio'
+        cache: 'npm'
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+    # run npm ci preventing script access to npm auth token
+    - run: npm ci --ignore-scripts
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+
+    # allow scripts to run without npm auth token
+    - run: npm rebuild && npm run prepare --if-present
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+
+    - name: Prepare
+      run: npm run prepare --if-present
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+
+    - name: Build
+      run: npm run build
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.working-directory }}/${{ inputs.build-path }}
+        if-no-files-found: error
