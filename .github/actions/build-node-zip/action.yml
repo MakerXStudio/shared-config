@@ -80,6 +80,8 @@ runs:
 
     - name: Zip build folder
       run: pushd ${{ inputs.build-path }}; zip -q -r ../${{ inputs.artifact-name }}.zip *
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
