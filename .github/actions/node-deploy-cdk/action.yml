@@ -66,7 +66,7 @@ runs:
             IFS=':' read -r placeholder value <<< "$trimmed"
             if [ ! -z "$placeholder" ]
             then
-              replacements+="s/#{$placeholder}#/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
+              replacements+="s/{{$placeholder}}/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
             fi
           done
         fi
