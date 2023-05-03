@@ -49,7 +49,7 @@ runs:
 
     # prepare static sites for config transformation upon later deployment
     - if: ${{ inputs.static-site }}
-      run: sed -n 's/\(${{ inputs.static-site-env-prefix }}_[A-Z0-9_]\+\)=\(.*\)/\1=#{\1}#/p' .env.sample > .env && cat .env
+      run: sed -n 's/\(${{ inputs.static-site-env-prefix }}_[A-Z0-9_]\+\)=\(.*\)/\1={{\1}}/p' .env.sample > .env && cat .env
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       
