@@ -1,31 +1,28 @@
-name: Create zendesk ticket
+name: Create Zendesk ticket
 on:
-  issues:
-    types: [labeled]
   workflow_call:
     inputs:
       ZENDESK_TENANT_NAME:
-        description: 'The zendesk tenant name, can be found in the URL, for example https://d3v-makerx.zendesk.com/'
+        description: 'The zendesk tenant name, can be found in the URL, for example https://my-subdomain.zendesk.com/'
         required: true
         type: string
       ISSUE_LABEL:
         description: 'The required label to trigger this workflow'
         required: true
         type: string
-        default: 'makerx'
     secrets:
-      ZENDESK_BASIC_AUTH:
+      ZENDESK_AUTH_TOKEN:
         description: 'The zendesk basic auth token for authentification. See https://support.zendesk.com/hc/en-us/articles/115000510267-How-can-I-authenticate-API-requests-#heading2'
         required: true
 jobs:
-  create-issue:
+  create-ticket:
+    name: Create Zendesk ticket
     if: github.event.label.name == ${{ inputs.ISSUE_LABEL }}
-    name: Create issue
     runs-on: ubuntu-latest
     steps:
       - env:
-          TENANT_NAME: ${{ inputs.ZENDESK_TENANT_NAME || vars.ZENDESK_TENANT_NAME }}
-          ZENDESK_BASIC_AUTH: ${{ secrets.ZENDESK_BASIC_AUTH }}
+          TENANT_NAME: ${{ inputs.ZENDESK_TENANT_NAME }}
+          ZENDESK_AUTH_TOKEN: ${{ secrets.ZENDESK_AUTH_TOKEN }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_USER: ${{ github.event.issue.user.login }}
@@ -33,7 +30,7 @@ jobs:
         run: |
           ## look up ticket in zendesk
           echo "Looking up ticket by issue: $ISSUE_URL"
-          tickets=$(curl --silent "https://$TENANT_NAME.zendesk.com/api/v2/search.json?query=external_id:$ISSUE_URL" -H "Authorization: Basic $ZENDESK_BASIC_AUTH" -H "Content-Type: application/json")
+          tickets=$(curl --silent "https://$TENANT_NAME.zendesk.com/api/v2/search.json?query=external_id:$ISSUE_URL" -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json")
           ticket_number=$(echo $tickets | jq '.results[0].id')
           echo "Found ticket number: " $ticket_number
 
@@ -43,12 +40,11 @@ jobs:
             body=$(jq -n --arg body "$ISSUE_BODY" '{body: $body}' | jq .body)
             echo "$body"
 
-            curl --silent -X POST https://$TENANT_NAME.zendesk.com/api/v2/tickets -H "Authorization: Basic $ZENDESK_BASIC_AUTH" -H "Content-Type: application/json" --data-binary @- <<DATA
+            curl --silent -X POST https://$TENANT_NAME.zendesk.com/api/v2/tickets -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json" --data-binary @- <<DATA
             {
               "ticket": {
                 "subject":   "Github_Issue: $ISSUE_TITLE",
                 "comment":   { "body": "[GITHUB_ISSUE_COMMENT]\n\n${body:1:-1}\n\nGITHUB ISSUE URL: $ISSUE_URL" },
-                "tags": ["phrase"],
                 "external_id": "$ISSUE_URL",
                 "requester": { "locale_id": 1, "name": "$ISSUE_USER from Github", "email": "$ISSUE_USER@users.noreply.github.com" },
                 "status": "open"

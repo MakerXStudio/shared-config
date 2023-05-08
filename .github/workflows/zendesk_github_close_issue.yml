@@ -1,0 +1,28 @@
+name: Close GitHub issue
+on:
+  workflow_call:
+permissions:
+  issues: write
+jobs:
+  close_issue:
+    name: Close GitHub issue
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v5
+        with:
+          script: |
+            // close github issue
+            payload = context.payload.client_payload
+            // split external id to get owner, repo and issue number
+            parts = payload.ticket.external_id.split("/")
+
+            issue_number = parts[parts.length - 1]
+            issue_repo = parts[parts.length - 3]
+            issue_owner = parts[parts.length - 4]
+
+            github.rest.issues.update({
+              issue_number: issue_number,
+              owner: issue_owner,
+              repo: issue_repo,
+              state: "closed"
+            })

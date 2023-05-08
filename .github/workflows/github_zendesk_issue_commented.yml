@@ -1,0 +1,76 @@
+name: Add comment to Zendesk ticket
+on:
+  workflow_call:
+    inputs:
+      ZENDESK_TENANT_NAME:
+        description: 'The zendesk tenant name, can be found in the URL, for example https://my-subdomain.zendesk.com/'
+        required: true
+        type: string
+      ISSUE_LABEL:
+        description: 'The required label to trigger this workflow'
+        required: true
+        type: string
+    secrets:
+      ZENDESK_AUTH_TOKEN:
+        description: 'The zendesk basic auth token for authentification. See https://support.zendesk.com/hc/en-us/articles/115000510267-How-can-I-authenticate-API-requests-#heading2'
+        required: true
+jobs:
+  add-ticket-comment:
+    name: Add comment to Zendesk ticket
+    if: ${{ !github.event.issue.pull_request && contains(github.event.issue.labels.*.name, inputs.ISSUE_LABEL) }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: add-ticket-comment
+        env:
+          TENANT_NAME: ${{ inputs.ZENDESK_TENANT_NAME }}
+          ZENDESK_AUTH_TOKEN: ${{ secrets.ZENDESK_AUTH_TOKEN }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_COMMENT_BODY: ${{ github.event.comment.body }}
+          ISSUE_USER: ${{ github.event.comment.user.login }}
+        run: |
+          ## add comment to zendesk ticket
+          echo "Looking up ticket by issue: $ISSUE_URL"
+          tickets=$(curl --silent "https://$TENANT_NAME.zendesk.com/api/v2/search.json?query=external_id:$ISSUE_URL" -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json")
+          ticket_number=$(echo $tickets | jq '.results[0].id')
+          echo "Found ticket number: " $ticket_number
+
+          if [[ "$ticket_number" == "null" ]];
+          then
+            echo "Skip, Zendesk ticket not found"
+          else
+            echo "Commenting Zendesk ticket $ticket_number"
+
+            echo "Looking up user by issuer: $ISSUE_USER"
+            users=$(curl --silent "https://$TENANT_NAME.zendesk.com/api/v2/users/search.json?query=$ISSUE_USER@users.noreply.github.com" -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json")
+            user_id=$(echo $users | jq '.users[0].id')
+            echo "Found user ID" $user_id
+
+            body=$(jq -n --arg body "$ISSUE_COMMENT_BODY" '{body: $body}' | jq .body)
+            body=${body:1:-1}
+            echo "$body"
+
+            if [[ "$user_id" == "null" ]]; then
+              user=$(curl --silent -X POST https://$TENANT_NAME.zendesk.com/api/v2/users -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json" --data-binary @- <<DATA
+              {
+                "user": {
+                  "role": "end-user",
+                  "name": "$ISSUE_USER from Github",
+                  "email": "$ISSUE_USER@users.noreply.github.com"
+                }
+              }
+          DATA
+              )
+              echo "$user"
+              user_id=$(echo $user | jq '.user.id')
+              echo "Created user ID" $user_id
+            fi
+
+            curl --silent -X PUT https://$TENANT_NAME.zendesk.com/api/v2/tickets/$ticket_number -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json" --data-binary @- <<DATA
+            {
+              "ticket": {
+                "comment": { "body": "[GITHUB_ISSUE_COMMENT]\n\n$body", "author_id": $user_id }
+              }
+            }
+          DATA
+          fi
+

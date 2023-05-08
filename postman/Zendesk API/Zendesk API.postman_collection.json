@@ -1,0 +1,124 @@
+{
+	"info": {
+		"_postman_id": "96459fc1-1193-4c59-b0d0-50540c828825",
+		"name": "Zendesk API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "368329"
+	},
+	"item": [
+		{
+			"name": "Create webhook",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{zendesk-auth-token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"webhook\": {\n    \"name\": \"Github Issue Integration\",\n    \"subscriptions\": [\"conditional_ticket_events\"],\n    \"endpoint\": \"https://api.github.com/repos/{{github-owner}}/{{github-repo}}/dispatches\",\n    \"http_method\": \"POST\",\n    \"request_format\": \"json\",\n    \"status\": \"active\",\n    \"authentication\": {\n      \"type\": \"bearer_token\",\n      \"add_position\": \"header\",\n      \"data\":{\n        \"token\":\"{{github-pat}}\"\n      }\n    }\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{zendesk-tenant-name}}.zendesk.com/api/v2/webhooks",
+					"protocol": "https",
+					"host": [
+						"{{zendesk-tenant-name}}",
+						"zendesk",
+						"com"
+					],
+					"path": [
+						"api",
+						"v2",
+						"webhooks"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create trigger - ticket solved",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{zendesk-auth-token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"trigger\": {\n    \"title\": \"Zendesk closing Github issues\",\n    \"actions\": [\n      {\n        \"field\": \"notification_webhook\",\n        \"value\": [\n          \"{{zendesk-webhook-id}}\",\n          \"{\\\"event_type\\\": \\\"zendesk_github_ticket_solved\\\", \\\"client_payload\\\": { \\\"ticket\\\": {\\\"id\\\": \\\"{{ticket.id}}\\\",\\\"external_id\\\": \\\"{{ticket.external_id}}\\\"}}}\"\n        ]\n      }\n    ],\n    \"conditions\": {\n      \"all\": [\n        {\n          \"field\": \"status\",\n          \"operator\": \"is\",\n          \"value\": \"solved\"\n        },\n        {\n          \"field\": \"subject_includes_word\",\n          \"operator\": \"includes\",\n          \"value\": \"Github_Issue\"\n        }\n      ],\n      \"any\": []\n    },\n    \"description\": \"#zendesk-github-ticket-solved\"\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{zendesk-tenant-name}}.zendesk.com/api/v2/triggers",
+					"protocol": "https",
+					"host": [
+						"{{zendesk-tenant-name}}",
+						"zendesk",
+						"com"
+					],
+					"path": [
+						"api",
+						"v2",
+						"triggers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create trigger - ticket commented",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic {{zendesk-auth-token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"trigger\": {\n        \"title\": \"Zendesk comments to Github\",\n        \"actions\": [\n            {\n                \"field\": \"notification_webhook\",\n                \"value\": [\n                    \"{{zendesk-webhook-id}}\",\n                    \"{\\\"event_type\\\": \\\"zendesk_github_ticket_commented\\\", \\\"client_payload\\\": { \\\"ticket\\\": {\\\"id\\\": \\\"{{ticket.id}}\\\",\\\"external_id\\\": \\\"{{ticket.external_id}}\\\"},\\\"comment\\\": {\\\"body\\\": \\\"{{ticket.latest_comment.value}}\\\",\\\"author\\\": \\\"{{ticket.latest_comment.author.name}}\\\"}}}\"\n                ]\n            }\n        ],\n        \"conditions\": {\n            \"all\": [\n                {\n                    \"field\": \"comment_is_public\",\n                    \"operator\": \"is\",\n                    \"value\": true\n                },\n                {\n                    \"field\": \"subject_includes_word\",\n                    \"operator\": \"includes\",\n                    \"value\": \"Github_Issue\"\n                },\n                {\n                    \"field\": \"comment_includes_word\",\n                    \"operator\": \"not_includes\",\n                    \"value\": \"GITHUB_ISSUE_COMMENT\"\n                }\n            ],\n            \"any\": []\n        },\n        \"description\": \"#zendesk-github-comments\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{zendesk-tenant-name}}.zendesk.com/api/v2/triggers",
+					"protocol": "https",
+					"host": [
+						"{{zendesk-tenant-name}}",
+						"zendesk",
+						"com"
+					],
+					"path": [
+						"api",
+						"v2",
+						"triggers"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
