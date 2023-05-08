@@ -8,4 +8,4 @@ jobs:
     with:
       ZENDESK_TENANT_NAME: ${{ vars.ZENDESK_TENANT_NAME }}
     secrets:
-      ZENDESK_BASIC_AUTH: ${{ secrets.ZENDESK_BASIC_AUTH }}
+      ZENDESK_AUTH_TOKEN: ${{ secrets.ZENDESK_AUTH_TOKEN }}

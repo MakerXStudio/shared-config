@@ -1,4 +1,4 @@
-name: Create Zendesk ticket when an issue is labelled with MakerX 
+name: Create Zendesk ticket when an issue is labelled with makerx 
 on:
   issues:
     types: [labeled]
@@ -9,4 +9,4 @@ jobs:
       ZENDESK_TENANT_NAME: ${{ vars.ZENDESK_TENANT_NAME }}
       ISSUE_LABEL: ${{ vars.ZENDESK_ISSUE_LABEL }}
     secrets:
-      ZENDESK_BASIC_AUTH: ${{ secrets.ZENDESK_BASIC_AUTH }}
+      ZENDESK_AUTH_TOKEN: ${{ secrets.ZENDESK_AUTH_TOKEN }}

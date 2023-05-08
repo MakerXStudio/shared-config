@@ -37,7 +37,7 @@ Zendesk - GitHub integration is done via webhook and Zendesk events. Zendesk eve
 
 ### Setup Zendesk webhook
 You can find the Postman collection for Zendesk API [here](postman/Zendesk%20API/). Import the collection and the global variables to your local postman. There are some variables to set:
-- zendesk-tenant-name: Zendesk tenant name (it also is called subdomain), can be found in the URL. For example, for https://d3v-makerx.zendesk.com/, it's d3v-makerx
+- zendesk-tenant-name: Zendesk tenant name (it also is called subdomain), can be found in the URL. For example, for https://my-subdomain.zendesk.com/, it's my-subdomain
 - zendesk-auth-token: Zendesk auth token. See https://support.zendesk.com/hc/en-us/articles/115000510267-How-can-I-authenticate-API-requests-#heading2
 - zendesk-webhook-id: Zendesk webhook Id, we will set that later
 - github-owner: GitHub repository owner
@@ -56,4 +56,4 @@ From GitHub side, there are:
 
 They will be invoked by `zendesk_github_ticket_commented` and `zendesk_github_ticket_solved` respectively. They need to be added to each repository that we want to sync comments and statuses from Zendesk. However, to avoid repeat code, they can also be reused via [Calling a reusable workflow](https://docs.github.com/en/actions/learn-github-actions/reusing-workflows#calling-a-reusable-workflow). Samples can be found [here](samples/zendesk-github-integration-workflows/).
 
-Zendesk - GitHub integration needs `INVOKE_WORKFLOW_TOKEN` secrets to invoke the workflows. It's a personal access token, the only requirement is to have permission `contents:write` to any repository that we want to sync from Zendesk.
+Zendesk - GitHub integration needs `GH_ZENDESK_INVOKE_WORKFLOW_TOKEN` secrets to invoke the workflows. It's a personal access token, the only requirement is to have permission `contents:write` to any repository that we want to sync from Zendesk.
