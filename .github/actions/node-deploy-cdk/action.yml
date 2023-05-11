@@ -62,7 +62,7 @@ runs:
           replacements=""
           for i in "${!transforms[@]}"
           do
-            trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:blank:]]*//' -e 's/[[:blank:]]*$//')"
             IFS=':' read -r placeholder value <<< "$trimmed"
             if [ ! -z "$placeholder" ]
             then
@@ -75,7 +75,7 @@ runs:
         readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
         for i in "${!lines[@]}"
         do
-          trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:blank:]]*//' -e 's/[[:blank:]]*$//')"
           IFS=':' read -ra pair <<< "$trimmed"
           mkdir -p "${pair[1]}"
           unzip -q "artifacts/${pair[0]}/${pair[0]}.zip" -d "${pair[1]}"
