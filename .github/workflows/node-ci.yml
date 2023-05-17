@@ -44,6 +44,9 @@ on:
         required: false
         type: string
         default: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+      pre-run-script:
+        required: false
+        type: string
     secrets:
       npm-auth-token:
         description: NPM auth token (don't pass in on a PR build on a public repository)
@@ -73,6 +76,10 @@ jobs:
           scope: '@makerxstudio'
           cache: 'npm'
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Pre-run
+        if: ${{ inputs.pre-run-script }}
+        run: ${{ inputs.pre-run-script }}
 
       # run npm ci preventing script access to npm auth token
       - run: npm ci --ignore-scripts
