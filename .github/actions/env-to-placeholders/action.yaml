@@ -1,0 +1,25 @@
+name: Create Templated Environment File
+description: Create a templated environment file from a provided template
+
+inputs:
+  env-template-path:
+    description: Path to the environment template file
+    required: true
+
+  env-output-path:
+    description: Path to the output environment file
+    required: true
+
+  env-variable-prefix:
+    description: The prefix for environment variables to replace with placeholders
+    required: true
+    default: 'VITE_'
+
+runs:
+  using: composite
+  steps:
+    - name: Create templated environment file
+      run: |
+        sed -n 's/\(${{ inputs.env-variable-prefix }}[A-Z0-9_]\+\)=\(.*\)/\1="{{\1}}"/p' ${{ inputs.env-template-path }} > ${{ inputs.env-output-path }}
+        cat ${{ inputs.env-output-path }}
+      shell: bash
