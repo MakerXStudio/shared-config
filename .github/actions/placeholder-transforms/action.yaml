@@ -1,0 +1,42 @@
+name: Replace placeholders with secrets in build artifacts
+description: Replace placeholder variables in static site build artifacts
+
+inputs:
+  app-artifact-path:
+    description: Path to the app artifact directory
+    required: true
+
+  static-site-transforms:
+    description: |
+      One or more (lines) of colon-separated pairs, indicating A) placeholder variable value used in static site build B) secret value to replace placeholder value with throughout the build E.g.:
+      static-site-transforms: |-
+        VITE_CLIENT_ID:SECRET VALUE
+        VITE_TENANT_ID:SECRET VALUE
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Replace variables in app artifacts
+      run: |
+        # Configure static site transforms if provided
+        if [ ! -z "${{ inputs.static-site-transforms }}" ]
+        then
+          readarray -t transforms <<<"${{ inputs.static-site-transforms }}"
+          replacements=""
+          for i in "${!transforms[@]}"
+          do
+            trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            IFS=':' read -r placeholder value <<< "$trimmed"
+            if [ ! -z "$placeholder" ]
+            then
+              replacements+="s/{{$placeholder}}/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
+            fi
+          done
+
+          if [ ! -z "$replacements" ]
+          then
+            find "${{ inputs.app-artifact-path }}" -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "$replacements" {} \;
+          fi
+        fi
+      shell: bash
