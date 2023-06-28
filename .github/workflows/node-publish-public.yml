@@ -1,0 +1,40 @@
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: 16.x
+      package-path:
+        required: false
+        type: string
+        default: './dist/package.json'
+
+jobs:
+  node-publish-public:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run prepare --if-present
+
+      - run: npm run build
+
+      - name: Publish (if version has been updated)
+        uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: ${{ inputs.package-path }}
+          access: 'public'
+          check-version: true
