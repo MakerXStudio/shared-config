@@ -9,6 +9,10 @@ on:
         required: false
         type: string
         default: './dist/package.json'
+    secrets:
+      NPM_TOKEN:
+        description: 'The token to publish to NPM'
+        required: true
 
 jobs:
   node-publish-public:
