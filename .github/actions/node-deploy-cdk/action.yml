@@ -69,23 +69,23 @@ runs:
               replacements+="s/{{$placeholder}}/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
             fi
           done
+
+          # Extract app artifacts
+          readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
+          for i in "${!lines[@]}"
+          do
+            trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            IFS=':' read -ra pair <<< "$trimmed"
+            mkdir -p "${pair[1]}"
+            unzip -q "artifacts/${pair[0]}/${pair[0]}.zip" -d "${pair[1]}"
+  
+            # Apply static site transforms if provided 
+            if [ ! -z "$replacements" ]
+            then
+              find "${pair[1]}" -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "$replacements" {} \;
+            fi
+          done
         fi
-
-        # Extract app artifacts
-        readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
-        for i in "${!lines[@]}"
-        do
-          trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-          IFS=':' read -ra pair <<< "$trimmed"
-          mkdir -p "${pair[1]}"
-          unzip -q "artifacts/${pair[0]}/${pair[0]}.zip" -d "${pair[1]}"
-
-          # Apply static site transforms if provided 
-          if [ ! -z "$replacements" ]
-          then
-            find "${pair[1]}" -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "$replacements" {} \;
-          fi
-        done
       shell: bash
 
     - name: Use Node.js ${{ inputs.node-version }}
