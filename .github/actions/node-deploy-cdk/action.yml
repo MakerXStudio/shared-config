@@ -69,7 +69,9 @@ runs:
               replacements+="s/{{$placeholder}}/$(echo $value | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
             fi
           done
-
+        fi
+        if [ ! -z "${{ inputs.app-artifact-unzips }}" ]
+        then
           # Extract app artifacts
           readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
           for i in "${!lines[@]}"
