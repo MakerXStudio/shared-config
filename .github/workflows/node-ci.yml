@@ -24,6 +24,10 @@ on:
         required: false
         type: string
         default: npm run test --if-present
+      test-environment-variables:
+        required: false
+        type: string
+        default: '{}'
       audit-script:
         required: false
         type: string
@@ -101,6 +105,7 @@ jobs:
         run: ${{ inputs.pre-test-script }}
       - name: Test
         run: ${{ inputs.test-script }}
+        env: ${{ fromJson(inputs.test-environment-variables) }}
       - name: Audit
         run: ${{ inputs.audit-script }}
       - name: Build
