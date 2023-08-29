@@ -43,10 +43,10 @@ runs:
     - name: Export
       shell: bash
       working-directory: ${{ inputs.working-directory }}/
-      run: docker save --output ${{ inputs.image-label }}.tar ${{ inputs.image-label }}:${{ inputs.image-tag }}
+      run: docker save --output ${{ inputs.image-label }}-docker-image.tar ${{ inputs.image-label }}:${{ inputs.image-tag }}
 
     - name: Compress docker image
-      run: gzip ${{ inputs.image-label }}.tar
+      run: gzip ${{ inputs.image-label }}-docker-image.tar
       working-directory: ${{ inputs.working-directory }}/
       shell: bash
 
