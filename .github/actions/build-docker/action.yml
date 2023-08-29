@@ -16,6 +16,13 @@ inputs:
   npm-token:
     description: NPM token to fetch private packages
     required: true
+  upload-artifact:
+    description: |
+      Whether to upload the artifact to GitHub Actions.
+      Useful to disable for PR runs.
+      Set to anything else than 'true' to disable.
+    required: false
+    default: 'true'
 
 # Why not use the official docker GitHub actions?
 # Well, they only support buildx, which only supports BuildKit, which doesn't support verifying the authenticity
@@ -44,6 +51,7 @@ runs:
       shell: bash
 
     - name: Upload artifact
+      if: inputs.upload-artifact == 'true'
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.image-label }}-docker-image
