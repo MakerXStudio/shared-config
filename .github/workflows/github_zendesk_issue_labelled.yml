@@ -37,14 +37,19 @@ jobs:
           if [[ "$ticket_number" == "null" ]];
           then
             ## create ticket if the lookup failed
+            title=$(jq -n --arg title "$ISSUE_TITLE" '{title: $title}' | jq .title)
+            title=${title:1:-1}
+            echo "$title"
+
             body=$(jq -n --arg body "$ISSUE_BODY" '{body: $body}' | jq .body)
+            body=${body:1:-1}
             echo "$body"
 
             curl --silent -X POST https://$TENANT_NAME.zendesk.com/api/v2/tickets -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json" --data-binary @- <<DATA
             {
               "ticket": {
-                "subject":   "Github_Issue: $ISSUE_TITLE",
-                "comment":   { "body": "[GITHUB_ISSUE_COMMENT]\n\n${body:1:-1}\n\nGITHUB ISSUE URL: $ISSUE_URL" },
+                "subject":   "Github_Issue: $title",
+                "comment":   { "body": "[GITHUB_ISSUE_COMMENT]\n\n${body}\n\nGITHUB ISSUE URL: $ISSUE_URL" },
                 "external_id": "$ISSUE_URL",
                 "requester": { "locale_id": 1, "name": "$ISSUE_USER from Github", "email": "$ISSUE_USER@users.noreply.github.com" },
                 "status": "open"

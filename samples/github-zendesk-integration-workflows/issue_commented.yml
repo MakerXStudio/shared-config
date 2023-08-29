@@ -7,5 +7,6 @@ jobs:
     uses: makerxstudio/shared-config/.github/workflows/github_zendesk_issue_commented.yml@main
     with:
       ZENDESK_TENANT_NAME: ${{ vars.ZENDESK_TENANT_NAME }}
+      ISSUE_LABEL: ${{ vars.ZENDESK_ISSUE_LABEL }}
     secrets:
       ZENDESK_AUTH_TOKEN: ${{ secrets.ZENDESK_AUTH_TOKEN }}

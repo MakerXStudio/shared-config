@@ -39,7 +39,7 @@ jobs:
             curl -X PUT https://$TENANT_NAME.zendesk.com/api/v2/tickets/$ticket_number -H "Authorization: Basic $ZENDESK_AUTH_TOKEN" -H "Content-Type: application/json" --data-binary @- <<DATA
             {
               "ticket": {
-                "comment": { "body": "Closed in GitHub" },
+                "comment": { "body": "[GITHUB_ISSUE_COMMENT]\n\nClosed in GitHub" },
                 "status": "solved"
               }
             }
