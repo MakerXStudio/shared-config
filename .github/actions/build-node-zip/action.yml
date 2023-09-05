@@ -5,7 +5,7 @@ inputs:
   node-version:
     description: Node version
     required: false
-    default: 16.x
+    default: 18.x
   working-directory:
     description: Working directory
     required: false
