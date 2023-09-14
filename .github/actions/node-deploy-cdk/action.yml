@@ -4,7 +4,7 @@ inputs:
   node-version:
     description: Node.js version to use
     required: false
-    default: 16.x
+    default: 18.x
   aws-access-key-id:
     description: AWS Access Key ID
     required: true
