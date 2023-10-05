@@ -112,6 +112,19 @@ runs:
       run: npm run diff
       working-directory: ${{ inputs.infrastructure-artifact-name }}
 
+    - name: CDK deploy secrets
+      shell: bash
+      run: npm run deploy-secrets --if-present
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
+
+    - name: Set secrets (secrets)
+      shell: bash
+      run: |
+        if [[ $(jq '.scripts["deploy-secrets"]' < package.json;) != null ]]; then
+          npm run set-secrets --if-present
+        fi
+      working-directory: ${{ inputs.infrastructure-artifact-name }}
+
     - name: CDK deploy
       shell: bash
       run: npm run deploy --if-present
