@@ -17,7 +17,7 @@ on:
 jobs:
   create-ticket:
     name: Create Zendesk ticket
-    if: github.event.label.name == ${{ inputs.ISSUE_LABEL }}
+    if: github.event.label.name == inputs.ISSUE_LABEL
     runs-on: ubuntu-latest
     steps:
       - env:
