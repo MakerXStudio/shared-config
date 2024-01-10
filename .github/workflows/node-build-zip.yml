@@ -25,6 +25,9 @@ on:
         required: false
         type: string
         default: VITE
+      pre-run-script:
+        required: false
+        type: string
     secrets:
       npm-auth-token:
         description: NPM auth token (optional, GITHUB_TOKEN is used by default)
@@ -54,6 +57,10 @@ jobs:
           scope: "@makerxstudio"
           cache: "npm"
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Pre-run
+        if: ${{ inputs.pre-run-script }}
+        run: ${{ inputs.pre-run-script }}
 
       # prepare static sites for config transformation upon later deployment
       - if: ${{ inputs.static-site }}
