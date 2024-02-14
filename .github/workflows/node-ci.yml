@@ -32,6 +32,10 @@ on:
         required: false
         type: boolean
         default: false
+      test-results-file-pattern:
+        required: false
+        type: string
+        default: '**/test-results.xml'
       audit-script:
         required: false
         type: string
@@ -100,27 +104,35 @@ jobs:
       - name: 'Commit lint'
         if: ${{ inputs.run-commit-lint }}
         run: ${{ inputs.commit-lint-script }}
+        
       - name: Lint
         run: ${{ inputs.lint-script }}
+
       - name: Compile
         run: ${{ inputs.compile-script }}
+
       - name: Pre-test
         if: ${{ inputs.pre-test-script }}
         run: ${{ inputs.pre-test-script }}
+
       - name: Test
         run: ${{ inputs.test-script }}
         env: ${{ fromJson(inputs.test-environment-variables) }}
+      
+        #Requires permissions.checks: write
       - name: Publish test results
         if: ${{ inputs.output-test-results }}
-        uses: phoenix-actions/test-reporting@v10
+        uses: phoenix-actions/test-reporting@v10        
         with:
           name: Integration tests
-          path: '**/test-results.xml'
+          path: ${{ inputs.test-results-file-pattern }}
           reporter: jest-junit
           output-to: checks
           fail-on-error: false
+
       - name: Audit
         run: ${{ inputs.audit-script }}
+
       - name: Build
         if: ${{ inputs.run-build }}
         run: ${{ inputs.build-script }}
