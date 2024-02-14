@@ -104,7 +104,7 @@ jobs:
       - name: 'Commit lint'
         if: ${{ inputs.run-commit-lint }}
         run: ${{ inputs.commit-lint-script }}
-        
+
       - name: Lint
         run: ${{ inputs.lint-script }}
 
@@ -124,7 +124,7 @@ jobs:
         if: ${{ inputs.output-test-results }}
         uses: phoenix-actions/test-reporting@v10        
         with:
-          name: Integration tests
+          name: Test results
           path: ${{ inputs.test-results-file-pattern }}
           reporter: jest-junit
           output-to: checks
