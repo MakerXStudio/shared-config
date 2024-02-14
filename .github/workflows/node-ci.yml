@@ -28,6 +28,10 @@ on:
         required: false
         type: string
         default: '{}'
+      output-test-results:
+        required: false
+        type: boolean
+        default: false
       audit-script:
         required: false
         type: string
@@ -106,6 +110,15 @@ jobs:
       - name: Test
         run: ${{ inputs.test-script }}
         env: ${{ fromJson(inputs.test-environment-variables) }}
+      - name: Publish test results
+        if: ${{ inputs.output-test-results }}
+        uses: phoenix-actions/test-reporting@v10
+        with:
+          name: Integration tests
+          path: '**/test-results.xml'
+          reporter: jest-junit
+          output-to: checks
+          fail-on-error: false
       - name: Audit
         run: ${{ inputs.audit-script }}
       - name: Build
