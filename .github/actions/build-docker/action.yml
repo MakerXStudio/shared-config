@@ -23,6 +23,13 @@ inputs:
       Set to anything else than 'true' to disable.
     required: false
     default: 'true'
+  disable-content-trust:
+    description: |
+      Whether to disable Docker Content Trust.
+      Required to use docker images that have not been signed.
+      Set to 'true' to disable.
+    required: false
+    default: 'false'
 
 # Why not use the official docker GitHub actions?
 # Well, they only support buildx, which only supports BuildKit, which doesn't support verifying the authenticity
@@ -38,7 +45,7 @@ runs:
         DOCKER_BUILDKIT: '0'
         NPM_TOKEN: ${{ inputs.npm-token }}
       working-directory: ${{ inputs.working-directory }}/
-      run: docker build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} --disable-content-trust=false  . --build-arg NPM_TOKEN=$NPM_TOKEN
+      run: docker build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} --disable-content-trust=${{ inputs.disable-content-trust }}  . --build-arg NPM_TOKEN=$NPM_TOKEN
 
     - name: Export
       shell: bash
