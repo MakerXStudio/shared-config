@@ -23,7 +23,7 @@ jobs:
 
             return $issue_owner + "/" + $issue_repo
       - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@c73dcc42429d4220d60b2b8daf3cee190a131129
+        uses: peter-evans/repository-dispatch@b0b38f73c8333be75d585a92b2c630a10d2a78f5
         if: ${{ startsWith(steps.repo-set.outputs.result, format('{0}/', github.repository_owner)) }}
         with:
           token: ${{ secrets.GH_ZENDESK_INVOKE_WORKFLOW_TOKEN }}
