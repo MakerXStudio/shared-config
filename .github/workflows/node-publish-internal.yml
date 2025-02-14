@@ -38,7 +38,7 @@ jobs:
       - run: npm run build
 
       - name: Publish (if version has been updated)
-        uses: JS-DevTools/npm-publish@v1
+        uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: ${{ inputs.package-path }}
