@@ -8,7 +8,7 @@ jobs:
     name: Trigger add comment workflow
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v5
+      - uses: actions/github-script@v7
         id: repo-set
         with:
           result-encoding: string
