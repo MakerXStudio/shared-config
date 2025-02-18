@@ -41,4 +41,3 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
           package: ${{ inputs.package-path }}
           access: 'public'
-          check-version: true

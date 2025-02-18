@@ -42,5 +42,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: ${{ inputs.package-path }}
-          check-version: true
           registry: 'https://npm.pkg.github.com'
