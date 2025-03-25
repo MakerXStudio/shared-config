@@ -59,6 +59,26 @@ on:
       pre-run-script:
         required: false
         type: string
+      upload-artifact-name:
+        required: false
+        type: string
+      upload-artifact-path:
+        required: false
+        description: The full path to the artifact directory, this path does not take working-directory into account
+        type: string
+        default: .
+      download-artifact-name:
+        required: false
+        type: string
+      download-artifact-pattern:
+        required: false
+        type: string
+      download-artifact-path:
+        required: false
+        description: The full path to the artifact directory, this path does not take working-directory into account
+        type: string
+        default: .
+
     secrets:
       npm-auth-token:
         description: NPM auth token (don't pass in on a PR build on a public repository)
@@ -81,13 +101,22 @@ jobs:
 
       # setup node + private repo access
       - name: Use Node.js ${{ inputs.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
           registry-url: 'https://npm.pkg.github.com'
           scope: '@makerxstudio'
           cache: 'npm'
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+
+      - name: Download artifacts
+        if: ${{ inputs.download-artifact-name || inputs.download-artifact-pattern }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.download-artifact-name }}
+          pattern: ${{ inputs.download-artifact-pattern }}
+          path: ${{ inputs.download-artifact-path }}
 
       - name: Pre-run
         if: ${{ inputs.pre-run-script }}
@@ -139,3 +168,10 @@ jobs:
         # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+
+      - name: Publish artifact
+        if: ${{ inputs.upload-artifact-name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.upload-artifact-name }}
+          path: ${{ inputs.upload-artifact-path }}
