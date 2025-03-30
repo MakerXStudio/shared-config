@@ -5,6 +5,9 @@ on:
         required: false
         type: string
         default: 18.x
+      python-version:
+        required: false
+        type: string
       working-directory:
         required: false
         type: string
@@ -44,6 +47,9 @@ on:
         required: false
         type: string
         default: npm run build
+      post-build-script:
+        required: false
+        type: string
       run-build:
         required: false
         type: boolean
@@ -59,6 +65,26 @@ on:
       pre-run-script:
         required: false
         type: string
+      upload-artifact-name:
+        required: false
+        type: string
+      upload-artifact-path:
+        required: false
+        description: The full path to the artifact directory, this path does not take working-directory into account
+        type: string
+        default: .
+      download-artifact-name:
+        required: false
+        type: string
+      download-artifact-pattern:
+        required: false
+        type: string
+      download-artifact-path:
+        required: false
+        description: The full path to the artifact directory, this path does not take working-directory into account
+        type: string
+        default: .
+
     secrets:
       npm-auth-token:
         description: NPM auth token (don't pass in on a PR build on a public repository)
@@ -88,6 +114,20 @@ jobs:
           scope: '@makerxstudio'
           cache: 'npm'
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Set up Python
+        if: ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Download artifacts
+        if: ${{ inputs.download-artifact-name || inputs.download-artifact-pattern }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.download-artifact-name }}
+          pattern: ${{ inputs.download-artifact-pattern }}
+          path: ${{ inputs.download-artifact-path }}
 
       - name: Pre-run
         if: ${{ inputs.pre-run-script }}
@@ -139,3 +179,14 @@ jobs:
         # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+
+      - name: Post build
+        if: ${{ inputs.post-build-script }}
+        run: ${{ inputs.post-build-script }}
+
+      - name: Publish artifact
+        if: ${{ inputs.upload-artifact-name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.upload-artifact-name }}
+          path: ${{ inputs.upload-artifact-path }}
