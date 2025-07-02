@@ -1,0 +1,104 @@
+# Example usage:
+# - name: Set deployment name tag
+#   id: deployment-name
+#   run: echo "deploymentName=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+# - name: Deploy core Bicep template
+#   id: deploy-core-resources
+#   uses: makerxstudio/shared-config/.github/actions/deploy-bicep@main
+#   with:
+#     deployment-name: ${{ steps.deployment-name.outputs.deploymentName}}-core
+#     tenant-id: ${{ vars.AZURE_TENANT_ID }}
+#     subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+#     resource-group-name: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
+#     template-file: ./infrastructure/template.bicep
+#     parameters-file: ./infrastructure/template.${{ environment }}.bicep
+#     parameters-json: |
+#       {
+#         "customDomainName": "${{ vars.CUSTOM_DOMAIN_NAME }}"
+#       }
+
+name: 'Deploy Bicep Template'
+description: 'Runs what-if, generates Azure Portal link, and then deploys a Bicep template'
+inputs:
+  deployment-name:
+    description: 'Name of the deployment'
+    required: true
+  tenant-id:
+    description: 'Azure tenant ID'
+    required: true
+  subscription-id:
+    description: 'Azure subscription ID'
+    required: true
+  resource-group-name:
+    description: 'Azure resource group name'
+    required: true
+  template-file:
+    description: 'Path to the Bicep template file'
+    required: true
+  parameters-file:
+    description: 'Path to the Bicep parameters file'
+    required: true
+  parameters-json:
+    description: 'Additional parameters in JSON format'
+    required: false
+    default: '{}'
+  run-what-if:
+    description: 'Whether to run what-if operation before deployment'
+    required: false
+    default: 'true'
+  display-outputs:
+    description: 'Whether to display template outputs; e.g. set to false to avoid ouputting secure outputs'
+    required: false
+    default: 'true'
+outputs:
+  deploymentOutputs:
+    description: 'Outputs from the deployment as JSON string'
+    value: ${{ toJSON(steps.deploy-template.outputs) }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Run what-if for Bicep template
+      uses: azure/bicep-deploy@v2
+      if: ${{ inputs.run-what-if == 'true' }}
+      with:
+        type: deployment
+        operation: whatIf
+        what-if-exclude-change-types: noChange,ignore
+        name: ${{ inputs.deployment-name }}
+        scope: resourceGroup
+        tenant-id: ${{ inputs.tenant-id }}
+        subscription-id: ${{ inputs.subscription-id }}
+        resource-group-name: ${{ inputs.resource-group-name }}
+        template-file: ${{ inputs.template-file }}
+        parameters-file: ${{ inputs.parameters-file }}
+        parameters: ${{ inputs.parameters-json }}
+
+    - name: Generate Azure Portal deployment link
+      id: generate-link
+      shell: bash
+      run: |
+        PORTAL_LINK="https://portal.azure.com/#@${{ inputs.tenant-id }}/view/HubsExtension/DeploymentDetailsBlade/~/overview/id/%2Fsubscriptions%2F${{ inputs.subscription-id }}%2FresourceGroups%2F${{ inputs.resource-group-name }}%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2F${{ inputs.deployment-name }}"
+        echo "portalLink=${PORTAL_LINK}" >> $GITHUB_OUTPUT
+        echo "::notice title=Deployment Link::${PORTAL_LINK}"
+
+    - name: Deploy Bicep template
+      id: deploy-template
+      uses: azure/bicep-deploy@v2
+      with:
+        type: deployment
+        operation: create
+        name: ${{ inputs.deployment-name }}
+        scope: resourceGroup
+        tenant-id: ${{ inputs.tenant-id }}
+        subscription-id: ${{ inputs.subscription-id }}
+        resource-group-name: ${{ inputs.resource-group-name }}
+        template-file: ${{ inputs.template-file }}
+        parameters-file: ${{ inputs.parameters-file }}
+        parameters: ${{ inputs.parameters-json }}
+
+    - name: Output deployment outputs
+      if: ${{ inputs.display-outputs == 'true' }}
+      shell: bash
+      run: |
+        echo "All outputs from deploy-template step:"
+        echo '${{ toJSON(steps.deploy-template.outputs) }}'
