@@ -1,0 +1,123 @@
+name: Prepare Artifact
+description: Downloads artifacts, unzips them, and performs static site transforms
+inputs:
+  app-artifact-unzips:
+    description: |
+      One or more (lines) of colon-separated pairs, indicating A) artifact name B) destination folder where the artifact is unzipped. E.g.:
+      app-artifact-unzips: |-
+        website:website/build
+        app:app/dist
+        poller:poller/build
+    required: true
+  static-site-transforms:
+    description: |
+      One or more (lines) of colon-separated pairs, indicating A) placeholder variable value used in static site build B) secret value to replace placeholder value with throughout the build E.g.:
+      static-site-transforms: |-
+        VITE_MAKER_GRAPH_API_ENDPOINT:SECRET VALUE
+        VITE_CLIENT_ID:SECRET VALUE
+        VITE_TENANT_ID:SECRET VALUE
+    required: false
+  artifacts-path:
+    description: Path where artifacts are downloaded
+    required: false
+    default: artifacts
+  file-extensions:
+    description: File extensions to apply transforms to (space separated)
+    required: false
+    default: "*.js *.html *.css *.json"
+
+runs:
+  using: composite
+  steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ${{ inputs.artifacts-path }}
+
+    - name: Unzip app artifacts and apply transforms
+      run: |
+        # Configure static site transforms if provided
+        replacements=""
+        if [ ! -z "${{ inputs.static-site-transforms }}" ]
+        then
+          echo "Configuring static site transforms..."
+          readarray -t transforms <<<"${{ inputs.static-site-transforms }}"
+          for i in "${!transforms[@]}"
+          do
+            trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            IFS=':' read -r placeholder value <<< "$trimmed"
+            if [ ! -z "$placeholder" ] && [ ! -z "$value" ]
+            then
+              echo "Adding transform: {{$placeholder}} -> [REDACTED]"
+              replacements+="s/{{$placeholder}}/$(echo "$value" | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
+            fi
+          done
+        fi
+
+        # Extract app artifacts
+        if [ ! -z "${{ inputs.app-artifact-unzips }}" ]
+        then
+          echo "Processing artifact unzips..."
+          readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
+          for i in "${!lines[@]}"
+          do
+            trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            if [ ! -z "$trimmed" ]
+            then
+              IFS=':' read -ra pair <<< "$trimmed"
+              artifact_name="${pair[0]}"
+              destination="${pair[1]}"
+              
+              if [ ! -z "$artifact_name" ] && [ ! -z "$destination" ]
+              then
+                echo "Processing artifact: $artifact_name -> $destination"
+                
+                # Create destination directory
+                mkdir -p "$destination"
+                
+                # Check if artifact exists as zip file
+                if [ -f "${{ inputs.artifacts-path }}/$artifact_name/$artifact_name.zip" ]
+                then
+                  echo "Unzipping: ${{ inputs.artifacts-path }}/$artifact_name/$artifact_name.zip to $destination"
+                  unzip -q "${{ inputs.artifacts-path }}/$artifact_name/$artifact_name.zip" -d "$destination"
+                elif [ -d "${{ inputs.artifacts-path }}/$artifact_name" ]
+                then
+                  echo "Copying directory: ${{ inputs.artifacts-path }}/$artifact_name to $destination"
+                  cp -r "${{ inputs.artifacts-path }}/$artifact_name"/* "$destination"/
+                else
+                  echo "Warning: Artifact $artifact_name not found in ${{ inputs.artifacts-path }}"
+                  continue
+                fi
+
+                # Apply static site transforms if provided
+                if [ ! -z "$replacements" ]
+                then
+                  echo "Applying static site transforms to $destination..."
+                  # Convert space-separated extensions to find arguments
+                  extensions="${{ inputs.file-extensions }}"
+                  find_args=""
+                  for ext in $extensions
+                  do
+                    if [ -z "$find_args" ]
+                    then
+                      find_args="-name '$ext'"
+                    else
+                      find_args="$find_args -o -name '$ext'"
+                    fi
+                  done
+                  
+                  # Apply transforms to matching files
+                  eval "find '$destination' -type f \( $find_args \) -exec sed -i '$replacements' {} \;"
+                  echo "Static site transforms applied to $destination"
+                fi
+              else
+                echo "Warning: Invalid artifact unzip format: $trimmed"
+              fi
+            fi
+          done
+        else
+          echo "No app-artifact-unzips provided"
+        fi
+
+        echo "Artifact processing complete"
+      shell: bash
