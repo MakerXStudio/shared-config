@@ -32,6 +32,10 @@ on:
       npm-auth-token:
         description: NPM auth token (optional, GITHUB_TOKEN is used by default)
         required: false
+    outputs:
+      artifact-name:
+        description: Name of the artifact created by this workflow
+        value: ${{ inputs.artifact-name }}
 
 jobs:
   build-zip:
