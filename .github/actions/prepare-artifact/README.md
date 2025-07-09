@@ -79,6 +79,7 @@ A reusable GitHub action that downloads artifacts, unzips them, and performs sta
 - **`static-site-transforms`** (optional): One or more lines of colon-separated pairs indicating:
   - A) placeholder variable value used in static site build
   - B) secret value to replace placeholder value with throughout the build
+  - Supports empty values (e.g., `VARIABLE:` will replace `{{VARIABLE}}` with empty string)
   
   Example:
   ```yaml
@@ -86,6 +87,7 @@ A reusable GitHub action that downloads artifacts, unzips them, and performs sta
     VITE_MAKER_GRAPH_API_ENDPOINT:https://api.example.com
     VITE_CLIENT_ID:your-client-id
     VITE_TENANT_ID:your-tenant-id
+    VITE_OPTIONAL_FEATURE:
   ```
 
 - **`artifacts-path`** (optional, default: `artifacts`): Path where artifacts are downloaded

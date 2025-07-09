@@ -46,10 +46,16 @@ runs:
           do
             trimmed="$(echo -e "${transforms[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
             IFS=':' read -r placeholder value <<< "$trimmed"
-            if [ ! -z "$placeholder" ] && [ ! -z "$value" ]
+            if [ ! -z "$placeholder" ]
             then
-              echo "Adding transform: {{$placeholder}} -> [REDACTED]"
-              replacements+="s/{{$placeholder}}/$(echo "$value" | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
+              if [ -z "$value" ]
+              then
+                echo "Adding transform: {{$placeholder}} -> [EMPTY]"
+                replacements+="s/{{$placeholder}}//gI;"
+              else
+                echo "Adding transform: {{$placeholder}} -> [REDACTED]"
+                replacements+="s/{{$placeholder}}/$(echo "$value" | sed -e 's/\\/\\\\/g; s/\//\\\//g; s/&/\\\&/g')/gI;"
+              fi
             fi
           done
         fi
