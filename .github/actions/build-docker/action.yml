@@ -64,7 +64,7 @@ runs:
         DOCKER_BUILDKIT: '1'
         NPM_TOKEN: ${{ inputs.npm-token }}
       working-directory: ${{ inputs.working-directory }}/
-      run: docker buildx build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} . --build-arg NPM_TOKEN=$NPM_TOKEN
+      run: docker buildx build --load --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} . --build-arg NPM_TOKEN=$NPM_TOKEN
 
     - name: Export
       shell: bash
