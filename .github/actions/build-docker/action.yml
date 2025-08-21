@@ -51,7 +51,7 @@ runs:
     - name: Build
       shell: bash
       env:
-        DOCKER_BUILDKIT: ${{ inputs.use-buildkit == 'false' && '0' || '1' }}
+        DOCKER_BUILDKIT: ${{ inputs.use-buildkit != 'false' && '1' || '0' }}
         NPM_TOKEN: ${{ inputs.npm-token }}
       working-directory: ${{ inputs.working-directory }}/
       run: docker build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} --disable-content-trust=${{ inputs.disable-content-trust }}  . --build-arg NPM_TOKEN=$NPM_TOKEN
