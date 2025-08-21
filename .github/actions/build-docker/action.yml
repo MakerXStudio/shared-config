@@ -15,7 +15,8 @@ inputs:
     default: latest
   npm-token:
     description: NPM token to fetch private packages
-    required: true
+    required: false
+    default: ''
   upload-artifact:
     description: |
       Whether to upload the artifact to GitHub Actions.
@@ -23,6 +24,14 @@ inputs:
       Set to anything else than 'true' to disable.
     required: false
     default: 'true'
+  use-buildkit:
+    description: |
+      Whether to use Docker BuildKit.
+      Set to 'true' to enable.
+      Note: BuildKit doesn't support verifying the authenticity
+      of images with Docker Content Trust https://github.com/docker/buildx/issues/987
+    required: false
+    default: 'false'
   disable-content-trust:
     description: |
       Whether to disable Docker Content Trust.
@@ -31,18 +40,18 @@ inputs:
     required: false
     default: 'false'
 
-# Why not use the official docker GitHub actions?
-# Well, they only support buildx, which only supports BuildKit, which doesn't support verifying the authenticity
-# of images with Docker Content Trust https://github.com/docker/buildx/issues/987
-
 runs:
   using: "composite"
   steps:
 
+    - name: Set up Docker Buildx
+      if: inputs.use-buildkit == 'true'
+      uses: docker/setup-buildx-action@v3
+
     - name: Build
       shell: bash
       env:
-        DOCKER_BUILDKIT: '0'
+        DOCKER_BUILDKIT: ${{ inputs.use-buildkit == 'false' && '0' || '1' }}
         NPM_TOKEN: ${{ inputs.npm-token }}
       working-directory: ${{ inputs.working-directory }}/
       run: docker build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} --disable-content-trust=${{ inputs.disable-content-trust }}  . --build-arg NPM_TOKEN=$NPM_TOKEN
