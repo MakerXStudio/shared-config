@@ -50,11 +50,21 @@ runs:
 
     - name: Build
       shell: bash
+      if: inputs.use-buildkit == 'false'
       env:
-        DOCKER_BUILDKIT: ${{ inputs.use-buildkit != 'false' && '1' || '0' }}
+        DOCKER_BUILDKIT: '0'
         NPM_TOKEN: ${{ inputs.npm-token }}
       working-directory: ${{ inputs.working-directory }}/
       run: docker build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} --disable-content-trust=${{ inputs.disable-content-trust }}  . --build-arg NPM_TOKEN=$NPM_TOKEN
+
+    - name: Buildx build
+      shell: bash
+      if: inputs.use-buildkit != 'false'
+      env:
+        DOCKER_BUILDKIT: '1'
+        NPM_TOKEN: ${{ inputs.npm-token }}
+      working-directory: ${{ inputs.working-directory }}/
+      run: docker buildx build --tag ${{ inputs.image-label }}:${{ inputs.image-tag }} . --build-arg NPM_TOKEN=$NPM_TOKEN
 
     - name: Export
       shell: bash
