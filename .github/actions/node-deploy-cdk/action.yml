@@ -6,11 +6,17 @@ inputs:
     required: false
     default: 18.x
   aws-access-key-id:
-    description: AWS Access Key ID
-    required: true
+    description: AWS Access Key ID to authenticate with (also specify `aws-secret-access-key`)
+    required: false
   aws-secret-access-key:
-    description: AWS Access Key Secret
-    required: true
+    description: AWS Access Key Secret to authenticate with (also specify `aws-access-key-id`)
+    required: false
+  aws-account-id:
+    description: AWS account ID to authenticate to using GitHub federation (also specify `aws-role-name`)
+    required: false
+  aws-role-name:
+    description: AWS role name to authenticate to using GitHub federation (also specify `aws-account-id`)
+    required: false
   aws-region:
     description: AWS region to deploy to
     required: true
@@ -95,11 +101,19 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - name: Configure aws credentials
+    - name: Configure AWS Credentials (access key)
+      if: ${{ inputs.aws-access-key-id && inputs.aws-secret-access-key }}
       uses: aws-actions/configure-aws-credentials@v3
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Configure AWS Credentials (GitHub federation)
+      if: ${{ inputs.aws-account-id && inputs.aws-role-name }}
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/${{ inputs.aws-role-name }}
         aws-region: ${{ inputs.aws-region }}
 
     - name: CDK bootstrap
