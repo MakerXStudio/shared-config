@@ -1,0 +1,187 @@
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        type: string
+        default: '3.12'
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+        
+      pre-run-script:
+        required: false
+        type: string
+      post-run-script:
+        required: false
+        type: string
+
+      run-commit-lint:
+        description: Run commit linting checks?
+        required: false
+        type: boolean
+        default: false
+      commit-lint-script:
+        required: false
+        type: string
+        default: uv run commitlint --from=HEAD~1 --to=HEAD
+
+      run-lint:
+        description: Run linting checks?
+        required: false
+        type: boolean
+        default: true
+      lint-script:
+        required: false
+        type: string
+        default: uv run ruff check .
+
+      run-check-types:
+        description: Run type checking?
+        required: false
+        type: boolean
+        default: true
+      check-types-script:
+        required: false
+        type: string
+        default: uv run mypy .
+
+      pre-test-script:
+        required: false
+        type: string
+      post-test-script:
+        required: false
+        type: string
+      run-tests:
+        description: Run tests?
+        required: false
+        type: boolean
+        default: true
+      test-script:
+        required: false
+        type: string
+        default: uv run pytest --junitxml=pytest.xml
+      test-environment-variables:
+        required: false
+        type: string
+        default: '{}'
+      output-test-results:
+        required: false
+        type: boolean
+        default: false
+      test-results-file-pattern:
+        required: false
+        type: string
+        default: 'pytest.xml'
+        
+      run-audit:
+        description: Run audit checks?
+        required: false
+        type: boolean
+        default: true
+      audit-script:
+        required: false
+        type: string
+        default: |
+          uv export --format requirements-txt --no-dev --no-hashes > requirements.txt
+          uv run pip-audit -r requirements.txt
+
+      pre-build-script:
+        required: false
+        type: string
+      post-build-script:
+        required: false
+        type: string
+      run-build:
+        required: false
+        type: boolean
+        default: false
+      build-script:
+        required: false
+        type: string
+        default: uv build
+
+jobs:
+  python-ci:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ inputs.python-version }}
+        run: uv python install ${{ inputs.python-version }}
+
+      - name: Pre-run
+        if: ${{ inputs.pre-run-script }}
+        run: ${{ inputs.pre-run-script }}
+
+      - name: Sync uv dependencies
+        run: uv sync --locked
+
+      # run all the CI scripts
+      
+      - name: 'Commit lint'
+        if: ${{ inputs.run-commit-lint }}
+        run: ${{ inputs.commit-lint-script }}
+
+      - name: Lint
+        if: ${{ inputs.run-lint }}
+        run: ${{ inputs.lint-script }}
+
+      - name: Check types
+        if: ${{ inputs.run-check-types }}
+        run: ${{ inputs.check-types-script }}
+
+      - name: Pre-test
+        if: ${{ inputs.pre-test-script }}
+        run: ${{ inputs.pre-test-script }}
+
+      - name: Test
+        if: ${{ inputs.run-tests }}
+        run: ${{ inputs.test-script }}
+        env: ${{ fromJson(inputs.test-environment-variables) }}
+
+      - name: Post-test
+        if: ${{ inputs.post-test-script }}
+        run: ${{ inputs.post-test-script }}
+
+        # Requires permissions.checks: write
+      - name: Surface failing tests
+        if: inputs.output-test-results && inputs.run-tests
+        uses: pmeier/pytest-results-action@20b5957
+        with:
+          path: ${{ inputs.test-results-file-pattern }}
+
+      - name: Audit
+        if: ${{ inputs.run-audit }}
+        run: ${{ inputs.audit-script }}
+
+      - name: Pre build
+        if: ${{ inputs.pre-build-script }}
+        run: ${{ inputs.pre-build-script }}
+
+      - name: Build
+        if: ${{ inputs.run-build }}
+        run: ${{ inputs.build-script }}
+
+      - name: Post build
+        if: ${{ inputs.post-build-script }}
+        run: ${{ inputs.post-build-script }}
+
+      - name: Post-run
+        if: ${{ inputs.post-run-script }}
+        run: ${{ inputs.post-run-script }}
