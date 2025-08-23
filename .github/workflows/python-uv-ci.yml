@@ -133,7 +133,7 @@ jobs:
         run: uv sync --locked
 
       # run all the CI scripts
-      
+
       - name: 'Commit lint'
         if: ${{ inputs.run-commit-lint }}
         run: ${{ inputs.commit-lint-script }}
@@ -162,7 +162,7 @@ jobs:
         # Requires permissions.checks: write
       - name: Surface failing tests
         if: inputs.output-test-results && inputs.run-tests
-        uses: pmeier/pytest-results-action@20b5957
+        uses: pmeier/pytest-results-action@20b595761ba9bf89e115e875f8bc863f913bc8ad
         with:
           path: ${{ inputs.test-results-file-pattern }}
 
