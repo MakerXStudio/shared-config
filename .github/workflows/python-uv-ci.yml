@@ -74,6 +74,10 @@ on:
         required: false
         type: string
         default: 'pytest.xml'
+      publish-coverage-path:
+        required: false
+        type: string
+        default: ''
         
       run-audit:
         description: Run audit checks?
@@ -155,10 +159,17 @@ jobs:
         run: ${{ inputs.test-script }}
         env: ${{ fromJson(inputs.test-environment-variables) }}
 
+      - name: Publish coverage
+        if: ${{ inputs.publish-coverage-path }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: ${{ inputs.publish-coverage-path }}
+
       - name: Post-test
         if: ${{ inputs.post-test-script }}
         run: ${{ inputs.post-test-script }}
-
+        
         # Requires permissions.checks: write
       - name: Surface failing tests
         if: inputs.output-test-results && inputs.run-tests
