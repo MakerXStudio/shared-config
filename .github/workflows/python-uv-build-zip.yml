@@ -84,7 +84,10 @@ jobs:
         run: ${{ inputs.post-build-script }}
 
       - name: Zip build folder
-        run: pushd ${{ inputs.build-path }}; zip -q -r ${{ inputs.artifact-name }}.zip ${{ inputs.build-globs }}
+        run: |
+          pushd ${{ inputs.build-path }}
+          zip -q -r ${{ inputs.artifact-name }}.zip ${{ inputs.build-globs }}
+          cp ${{ inputs.artifact-name }}.zip "$(dirs +1)"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
