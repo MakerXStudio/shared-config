@@ -9,11 +9,16 @@ on:
         required: false
         type: string
         default: '.'
-      build-paths:
-        description: Path(s) (with glob support) of the build output relative to {working-directory}
+      build-path:
+        description: Path of the build output relative to {working-directory}
         required: false
         type: string
         default: 'dist'
+      build-globs:
+        description: Glob(s) of the files to zip relative to the {build-path} (relative path will be reflected in the zip artifact)
+        required: false
+        type: string
+        default: '*'
       artifact-name:
         required: false
         type: string
@@ -79,7 +84,7 @@ jobs:
         run: ${{ inputs.post-build-script }}
 
       - name: Zip build folder
-        run: zip -q -r ${{ inputs.artifact-name }}.zip ${{ inputs.build-paths }}
+        run: push d ${{ inputs.build-path }}; zip -q -r ${{ inputs.artifact-name }}.zip ${{ inputs.build-build-globs }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
