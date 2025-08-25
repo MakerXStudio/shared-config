@@ -1,0 +1,89 @@
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        type: string
+        default: '3.12'
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+      build-paths:
+        description: Path(s) (with glob support) of the build output relative to {working-directory}
+        required: false
+        type: string
+        default: 'dist'
+        
+      pre-run-script:
+        required: false
+        type: string
+      post-run-script:
+        required: false
+        type: string
+
+      pre-build-script:
+        required: false
+        type: string
+      post-build-script:
+        required: false
+        type: string
+      build-script:
+        required: false
+        type: string
+        default: uv build
+
+jobs:
+  python-ci:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ inputs.python-version }}
+        run: uv python install ${{ inputs.python-version }}
+
+      - name: Pre-run
+        if: ${{ inputs.pre-run-script }}
+        run: ${{ inputs.pre-run-script }}
+
+      - name: Sync uv dependencies
+        run: uv sync --locked
+
+      - name: Pre build
+        if: ${{ inputs.pre-build-script }}
+        run: ${{ inputs.pre-build-script }}
+
+      - name: Build
+        run: ${{ inputs.build-script }}
+
+      - name: Post build
+        if: ${{ inputs.post-build-script }}
+        run: ${{ inputs.post-build-script }}
+
+      - name: Zip build folder
+        run: zip -q -r ${{ inputs.artifact-name }}.zip ${{ inputs.build-paths }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.working-directory }}/${{ inputs.artifact-name }}.zip
+          if-no-files-found: error
+
+      - name: Post-run
+        if: ${{ inputs.post-run-script }}
+        run: ${{ inputs.post-run-script }}
