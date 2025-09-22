@@ -105,6 +105,10 @@ on:
         required: false
         type: string
         default: uv build
+    secrets:
+      TEST_SECRETS:
+        description: JSON object containing test secrets to be unfurled as environment variables
+        required: false
 
 jobs:
   python-ci:
@@ -156,8 +160,23 @@ jobs:
 
       - name: Test
         if: ${{ inputs.run-tests }}
-        run: ${{ inputs.test-script }}
-        env: ${{ fromJson(inputs.test-environment-variables) }}
+        run: |
+          # Parse and export environment variables from JSON
+          # Handle empty or null TEST_SECRETS
+          if [ -z "$TEST_SECRETS" ] || [ "$TEST_SECRETS" = "null" ]; then
+            TEST_SECRETS='{}'
+          fi
+          
+          # Use jq to merge JSON objects, with TEST_SECRETS taking precedence
+          echo "$TEST_ENV_VARS $TEST_SECRETS" | jq -s '.[0] * .[1]' | jq -r 'to_entries[] | "export \(.key)=\(.value)"' | while IFS= read -r line; do
+            eval "$line"
+          done
+          
+          # Run the test script
+          ${{ inputs.test-script }}
+        env:
+          TEST_ENV_VARS: '${{ inputs.test-environment-variables }}'
+          TEST_SECRETS: '${{ secrets.TEST_SECRETS }}'
 
       - name: Publish coverage
         if: ${{ inputs.publish-coverage-path }}
