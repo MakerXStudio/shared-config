@@ -161,16 +161,72 @@ jobs:
       - name: Test
         if: ${{ inputs.run-tests }}
         run: |
-          # Parse and export environment variables from JSON
-          # Handle empty or null TEST_SECRETS
-          if [ -z "$TEST_SECRETS" ] || [ "$TEST_SECRETS" = "null" ]; then
-            TEST_SECRETS='{}'
-          fi
+          # Function to safely process and export environment variables from JSON
+          process_env_vars() {
+            local json_data="$1"
+            local source_name="$2"
+            local mask_secrets="$3"
+            local temp_file
+            
+            if [ -n "$json_data" ] && [ "$json_data" != "null" ] && [ "$json_data" != "{}" ]; then
+              # Create temporary file to avoid subshell export issues
+              temp_file=$(mktemp)
+              trap 'rm -f "$temp_file"' RETURN
+              
+              # Validate JSON first to prevent jq injection
+              if ! echo "$json_data" | jq -e . >/dev/null 2>&1; then
+                echo "Error: Invalid JSON in $source_name"
+                rm -f "$temp_file"
+                exit 1
+              fi
+              
+              # Process entries and write to temp file
+              echo "$json_data" | jq -r 'to_entries[] | select(.value != null) | @base64 "\(.key)=\(.value)"' > "$temp_file" || {
+                echo "Error: Failed to process JSON in $source_name"
+                rm -f "$temp_file"
+                exit 1
+              }
+              
+              # Read from temp file to avoid subshell issues
+              local line_num=0
+              while IFS= read -r line; do
+                line_num=$((line_num + 1))
+                if [ -n "$line" ]; then
+                  # Validate base64 input before decoding
+                  if [[ "$line" =~ ^[A-Za-z0-9+/]*=*$ ]]; then
+                    decoded=$(echo "$line" | base64 -d 2>/dev/null)
+                    if [ $? -eq 0 ] && [ -n "$decoded" ]; then
+                      # More robust parsing to prevent injection via key names
+                      if [[ "$decoded" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+                        key="${BASH_REMATCH[1]}"
+                        value="${BASH_REMATCH[2]}"
+                        
+                        # Mask secrets in GitHub Actions logs
+                        if [ "$mask_secrets" = "true" ]; then
+                          echo "::add-mask::$value"
+                        fi
+                        export "$key"="$value"
+                      else
+                        echo "Warning: Skipping malformed environment variable at entry $line_num in $source_name"
+                      fi
+                    else
+                      echo "Warning: Failed to decode base64 at entry $line_num in $source_name"
+                    fi
+                  else
+                    echo "Warning: Invalid base64 format at entry $line_num in $source_name"
+                  fi
+                fi
+              done < "$temp_file"
+              
+              rm -f "$temp_file"
+            fi
+          }
           
-          # Use jq to merge JSON objects, with TEST_SECRETS taking precedence
-          echo "$TEST_ENV_VARS $TEST_SECRETS" | jq -s '.[0] * .[1]' | jq -r 'to_entries[] | "export \(.key)=\(.value)"' | while IFS= read -r line; do
-            eval "$line"
-          done
+          # Process test environment variables first
+          process_env_vars "$TEST_ENV_VARS" "test-environment-variables" "false"
+          
+          # Process test secrets (with precedence over env vars, and mask them in logs)
+          process_env_vars "$TEST_SECRETS" "TEST_SECRETS" "true"
           
           # Run the test script
           ${{ inputs.test-script }}
