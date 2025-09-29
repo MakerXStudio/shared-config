@@ -161,16 +161,46 @@ jobs:
       - name: Test
         if: ${{ inputs.run-tests }}
         run: |
-          # Parse and export environment variables from JSON
-          # Handle empty or null TEST_SECRETS
-          if [ -z "$TEST_SECRETS" ] || [ "$TEST_SECRETS" = "null" ]; then
-            TEST_SECRETS='{}'
-          fi
+          # Function to safely process and export environment variables from JSON
+          process_env_vars() {
+            local json_data="$1"
+            local source_name="$2"
+            local mask_secrets="$3"
+            
+            if [ -n "$json_data" ] && [ "$json_data" != "null" ] && [ "$json_data" != "{}" ]; then
+              # Validate JSON first to prevent jq injection
+              if ! echo "$json_data" | jq -e . >/dev/null 2>&1; then
+                echo "Error: Invalid JSON in $source_name"
+                exit 1
+              fi
+              
+              # Use process substitution to avoid subshell export issues
+              local entry_num=0
+              while IFS= read -r key && IFS= read -r value; do
+                entry_num=$((entry_num + 1))
+                
+                # Validate key contains only safe characters
+                if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                  # Mask secrets in GitHub Actions logs
+                  if [ "$mask_secrets" = "true" ]; then
+                    echo "::add-mask::$value"
+                  fi
+                  export "$key"="$value"
+                else
+                  echo "Warning: Skipping invalid environment variable name at entry $entry_num in $source_name"
+                fi
+              done < <(echo "$json_data" | jq -r 'to_entries[] | select(.value != null) | .key, .value') || {
+                echo "Error: Failed to process JSON in $source_name"
+                exit 1
+              }
+            fi
+          }
           
-          # Use jq to merge JSON objects, with TEST_SECRETS taking precedence
-          echo "$TEST_ENV_VARS $TEST_SECRETS" | jq -s '.[0] * .[1]' | jq -r 'to_entries[] | "export \(.key)=\(.value)"' | while IFS= read -r line; do
-            eval "$line"
-          done
+          # Process test environment variables first
+          process_env_vars "$TEST_ENV_VARS" "test-environment-variables" "false"
+          
+          # Process test secrets (with precedence over env vars, and mask them in logs)
+          process_env_vars "$TEST_SECRETS" "TEST_SECRETS" "true"
           
           # Run the test script
           ${{ inputs.test-script }}
