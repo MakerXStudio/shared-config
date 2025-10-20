@@ -40,6 +40,10 @@ on:
         required: false
         type: string
         default: npm audit
+      audit-fail-on-vulnerability:
+        required: false
+        type: boolean
+        default: true
       build-script:
         required: false
         type: string
@@ -132,6 +136,7 @@ jobs:
 
       - name: Audit
         run: ${{ inputs.audit-script }}
+        continue-on-error: ${{ !inputs.audit-fail-on-vulnerability }}
 
       - name: Build
         if: ${{ inputs.run-build }}
