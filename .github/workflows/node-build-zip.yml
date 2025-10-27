@@ -94,7 +94,7 @@ jobs:
         run: pushd ${{ inputs.build-path }}; zip -q -r ../${{ inputs.artifact-name }}.zip *
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.working-directory }}/${{ inputs.artifact-name }}.zip
