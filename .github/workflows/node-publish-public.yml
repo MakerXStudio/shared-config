@@ -36,7 +36,7 @@ jobs:
       - run: npm run build
 
       - name: Publish (if version has been updated)
-        uses: JS-DevTools/npm-publish@v3
+        uses: JS-DevTools/npm-publish@v4
         with:
           token: ${{ secrets.NPM_TOKEN }}
           package: ${{ inputs.package-path }}
