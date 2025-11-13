@@ -1,0 +1,51 @@
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: 24.x
+      package-path:
+        required: false
+        type: string
+        default: './dist/package.json'
+
+jobs:
+  node-publish-public:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      # Note: Trusted publishing requires npm CLI version 11.5.1 or later.
+      - name: Ensure NPM 11.5.1 or higher
+        run: |
+          CURRENT_NPM_VERSION=$(npm -v)
+          REQUIRED_NPM_VERSION="11.5.1"
+          if [ "$(printf '%s\n' "$REQUIRED_NPM_VERSION" "$CURRENT_NPM_VERSION" | sort -V | head -n1)" = "$CURRENT_NPM_VERSION" ] && [ "$CURRENT_NPM_VERSION" != "$REQUIRED_NPM_VERSION" ]; then
+            echo "NPM version $CURRENT_NPM_VERSION is too old. Upgrading to $REQUIRED_NPM_VERSION..."
+            npm install -g npm@$REQUIRED_NPM_VERSION
+          else
+            echo "NPM version $CURRENT_NPM_VERSION is sufficient (>= $REQUIRED_NPM_VERSION)"
+          fi
+
+      - run: npm ci
+
+      - run: npm run prepare --if-present
+
+      - run: npm run build
+
+      - name: Publish (if version has been updated)
+        uses: JS-DevTools/npm-publish@v4.1.1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: ${{ inputs.package-path }}
+          access: 'public'
