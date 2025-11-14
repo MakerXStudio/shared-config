@@ -9,9 +9,13 @@ on:
         required: false
         type: string
         default: './dist/package.json'
+      access:
+        required: false
+        type: string
+        default: 'restricted' # 'public' or 'restricted'
 
 jobs:
-  node-publish-public:
+  node-publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -50,4 +54,4 @@ jobs:
         uses: JS-DevTools/npm-publish@v4
         with:
           package: ${{ inputs.package-path }}
-          access: 'public'
+          access: ${{ inputs.access }}
