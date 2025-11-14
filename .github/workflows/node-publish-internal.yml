@@ -4,7 +4,7 @@ on:
       node-version:
         required: false
         type: string
-        default: 18.x
+        default: 24.x
       package-path:
         required: false
         type: string
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -38,7 +38,7 @@ jobs:
       - run: npm run build
 
       - name: Publish (if version has been updated)
-        uses: JS-DevTools/npm-publish@v3
+        uses: JS-DevTools/npm-publish@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: ${{ inputs.package-path }}
