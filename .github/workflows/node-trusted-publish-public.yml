@@ -47,7 +47,7 @@ jobs:
       - run: npm run build
 
       - name: Publish (if version has been updated)
-        uses: JS-DevTools/npm-publish@v4.1.1
+        uses: JS-DevTools/npm-publish@v4
         with:
           package: ${{ inputs.package-path }}
           access: 'public'
