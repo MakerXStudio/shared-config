@@ -44,7 +44,7 @@ jobs:
             echo "NPM version $CURRENT_NPM_VERSION is sufficient (>= $REQUIRED_NPM_VERSION)"
           fi
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - run: npm run prepare --if-present
 
