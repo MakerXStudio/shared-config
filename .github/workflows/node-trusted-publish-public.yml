@@ -14,7 +14,8 @@ jobs:
   node-publish-public:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      contents: read
+      id-token: write  # Required for OIDC
     steps:
       - name: Checkout
         uses: actions/checkout@v5
