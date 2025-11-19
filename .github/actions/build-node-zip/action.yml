@@ -39,7 +39,7 @@ runs:
 
     # setup node + private repo access
     - name: Use Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         registry-url: 'https://npm.pkg.github.com'
