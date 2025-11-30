@@ -102,6 +102,8 @@ runs:
                   # Convert space-separated extensions to find arguments
                   extensions="${{ inputs.file-extensions }}"
                   find_args=""
+                  # Disable glob expansion to prevent *.js from expanding to actual filenames
+                  set -o noglob
                   for ext in $extensions
                   do
                     if [ -z "$find_args" ]
@@ -111,6 +113,7 @@ runs:
                       find_args="$find_args -o -name '$ext'"
                     fi
                   done
+                  set +o noglob
                   
                   # Apply transforms to matching files
                   eval "find '$destination' -type f \( $find_args \) -exec sed -i '$replacements' {} \;"
