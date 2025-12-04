@@ -9,6 +9,11 @@ on:
         required: false
         type: string
         default: '.'
+      uv-sync-extras:
+        description: Extras to include when syncing uv dependencies
+        required: false
+        type: string
+        default: ''
         
       pre-run-script:
         required: false
@@ -138,7 +143,7 @@ jobs:
         run: ${{ inputs.pre-run-script }}
 
       - name: Sync uv dependencies
-        run: uv sync --locked
+        run: uv sync --locked ${{ inputs.uv-sync-extras }}
 
       # run all the CI scripts
 

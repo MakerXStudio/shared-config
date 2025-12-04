@@ -14,6 +14,11 @@ on:
         required: false
         type: string
         default: 'dist'
+      uv-sync-extras:
+        description: Extras to include when syncing uv dependencies
+        required: false
+        type: string
+        default: ''
       build-globs:
         description: Glob(s) of the files to zip relative to the {build-path} (relative path will be reflected in the zip artifact)
         required: false
@@ -70,7 +75,7 @@ jobs:
         run: ${{ inputs.pre-run-script }}
 
       - name: Sync uv dependencies
-        run: uv sync --locked
+        run: uv sync --locked ${{ inputs.uv-sync-extras }}
 
       - name: Pre build
         if: ${{ inputs.pre-build-script }}
