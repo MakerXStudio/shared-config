@@ -25,6 +25,10 @@ inputs:
     description: File extensions to apply transforms to (space separated)
     required: false
     default: "*.js *.html *.css *.json"
+  artifact-pattern:
+    description: 'Optional glob pattern to filter which artifacts to download (e.g., "web-*" or "functions-*")'
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -33,6 +37,7 @@ runs:
       uses: actions/download-artifact@v4
       with:
         path: ${{ inputs.artifacts-path }}
+        pattern: ${{ inputs.artifact-pattern }}
 
     - name: Unzip app artifacts and apply transforms
       run: |
