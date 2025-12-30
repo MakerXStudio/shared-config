@@ -103,7 +103,7 @@ runs:
 
     - name: Configure AWS Credentials (access key)
       if: ${{ inputs.aws-access-key-id && inputs.aws-secret-access-key }}
-      uses: aws-actions/configure-aws-credentials@v3
+      uses: aws-actions/configure-aws-credentials@v5
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
@@ -111,7 +111,7 @@ runs:
 
     - name: Configure AWS Credentials (GitHub federation)
       if: ${{ inputs.aws-account-id && inputs.aws-role-name }}
-      uses: aws-actions/configure-aws-credentials@v3
+      uses: aws-actions/configure-aws-credentials@v5
       with:
         role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/${{ inputs.aws-role-name }}
         aws-region: ${{ inputs.aws-region }}
