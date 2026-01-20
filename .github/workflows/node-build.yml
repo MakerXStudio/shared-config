@@ -4,7 +4,7 @@ on:
       node-version:
         required: false
         type: string
-        default: 18.x
+        default: 24.x
       working-directory:
         required: false
         type: string
