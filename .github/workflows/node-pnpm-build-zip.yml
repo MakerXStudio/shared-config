@@ -1,0 +1,111 @@
+on:
+  workflow_call:
+    inputs:
+      pnpm-version:
+        required: false
+        type: string
+        default: "9"
+      node-version:
+        required: false
+        type: string
+        default: 18.x
+      working-directory:
+        required: false
+        type: string
+        default: "."
+      build-path:
+        required: false
+        type: string
+        default: build
+      artifact-name:
+        required: false
+        type: string
+        default: node-app
+      static-site:
+        required: false
+        type: boolean
+        default: false
+      static-site-env-prefix:
+        required: false
+        type: string
+        default: VITE
+      pre-run-script:
+        required: false
+        type: string
+      sample-env-path:
+        required: false
+        type: string
+        default: .env.sample
+    secrets:
+      npm-auth-token:
+        description: NPM auth token (optional, GITHUB_TOKEN is used by default)
+        required: false
+    outputs:
+      artifact-name:
+        description: Name of the artifact created by this workflow
+        value: ${{ inputs.artifact-name }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          version: ${{ inputs.pnpm-version }}
+          standalone: true
+
+      - name: Use Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: "pnpm"
+          cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+
+      - name: Pre-run
+        if: ${{ inputs.pre-run-script }}
+        run: ${{ inputs.pre-run-script }}
+
+      # prepare static sites for config transformation upon later deployment
+      - if: ${{ inputs.static-site }}
+        run: sed -n 's/\(${{ inputs.static-site-env-prefix }}_[A-Z0-9_]\+\)=\(.*\)/\1={{\1}}/p' ${{ inputs.sample-env-path }} > .env && cat .env
+
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+        run: pnpm install --frozen-lockfile
+        
+      - name: Prepare
+        run: pnpm run --if-present prepare
+
+      - name: Build
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+        run: pnpm run build
+
+      # build path is relative to working dir  
+      - name: Zip build folder
+        run: pushd ${{ inputs.build-path }}; zip -q -r ../${{ inputs.artifact-name }}.zip *
+      
+      # working dir doesn't apply to this, so we are explicit here
+      - name: Upload artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.working-directory }}/${{ inputs.artifact-name }}.zip
+          if-no-files-found: error
