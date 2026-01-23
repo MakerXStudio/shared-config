@@ -1,6 +1,49 @@
 # MakerX Shared Config
 A collection of MakerX reusable workflows and configs.
 
+## Versioning and Releases
+
+This repository uses [Release Please](https://github.com/googleapis/release-please) to automate releases based on [Conventional Commits](https://www.conventionalcommits.org/).
+
+### Available Tags
+
+When referencing workflows or actions from this repository, you can pin to specific versions using the following tag formats:
+
+| Tag | Example | Description |
+|-----|---------|-------------|
+| Full version | `v1.2.3` | Pin to an exact release (recommended for production) |
+| Minor version | `v1.2` | Automatically receive patch updates |
+| Major version | `v1` | Automatically receive minor and patch updates |
+| Latest | `latest` | Always points to the most recent release |
+
+### Usage Examples
+
+```yaml
+# Pin to exact version (most stable)
+uses: MakerXStudio/shared-config/.github/workflows/example.yml@v1.2.3
+
+# Pin to minor version (receives patch updates)
+uses: MakerXStudio/shared-config/.github/workflows/example.yml@v1.2
+
+# Pin to major version (receives minor and patch updates)
+uses: MakerXStudio/shared-config/.github/workflows/example.yml@v1
+
+# Always use latest (not recommended for production)
+uses: MakerXStudio/shared-config/.github/workflows/example.yml@latest
+```
+
+### Contributing
+
+When contributing to this repository, use [Conventional Commits](https://www.conventionalcommits.org/) to ensure proper versioning:
+
+- `feat: description` - New feature (bumps minor version)
+- `fix: description` - Bug fix (bumps patch version)
+- `feat!: description` or `BREAKING CHANGE:` in body - Breaking change (bumps major version)
+
+Release Please will automatically create a release PR when changes are pushed to `main`. Merging this PR triggers the release.
+
+For more information, see the [Release Please documentation](https://github.com/googleapis/release-please#readme).
+
 ## GitHub - Zendesk integration
 The zendesk github integration consist of 3 github actions.
 - [github_zendesk_issue_labelled.yml](.github/workflows/github_zendesk_issue_labelled.yml)
