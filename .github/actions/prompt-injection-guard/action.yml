@@ -1,0 +1,88 @@
+name: Prompt Injection Guard
+description: Scan text for prompt injection attacks using Llama Prompt Guard 2
+
+inputs:
+  text:
+    description: The text to scan for prompt injection attacks
+    required: true
+  huggingface-token:
+    description: HuggingFace token for accessing the gated model
+    required: true
+  model:
+    description: Model to use (86M or 22M)
+    required: false
+    default: '86M'
+  threshold:
+    description: Confidence threshold for MALICIOUS classification (0.0-1.0)
+    required: false
+    default: '0.5'
+  fail-on-malicious:
+    description: Whether to fail the action if malicious content is detected
+    required: false
+    default: 'true'
+
+outputs:
+  classification:
+    description: Classification result (BENIGN or MALICIOUS)
+    value: ${{ steps.classify.outputs.classification }}
+  confidence:
+    description: Confidence score (0.0-1.0)
+    value: ${{ steps.classify.outputs.confidence }}
+  is-malicious:
+    description: Whether the text was classified as malicious (true/false)
+    value: ${{ steps.classify.outputs.is_malicious }}
+
+runs:
+  using: composite
+
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.cache/huggingface/hub
+        key: prompt-guard-${{ runner.os }}-${{ inputs.model }}-v1
+        restore-keys: |
+          prompt-guard-${{ runner.os }}-${{ inputs.model }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install --quiet torch transformers
+
+    - name: Download model
+      shell: bash
+      env:
+        HF_TOKEN: ${{ inputs.huggingface-token }}
+      run: |
+        MODEL_NAME="meta-llama/Llama-Prompt-Guard-2-${{ inputs.model }}"
+        python -c "
+        from transformers import AutoTokenizer, AutoModelForSequenceClassification
+        AutoTokenizer.from_pretrained('$MODEL_NAME')
+        AutoModelForSequenceClassification.from_pretrained('$MODEL_NAME')
+        print('Model downloaded and cached successfully')
+        "
+
+    - name: Classify text
+      id: classify
+      shell: bash
+      env:
+        HF_TOKEN: ${{ inputs.huggingface-token }}
+        INPUT_TEXT: ${{ inputs.text }}
+        MODEL_SIZE: ${{ inputs.model }}
+        THRESHOLD: ${{ inputs.threshold }}
+      run: |
+        python "${{ github.action_path }}/classify.py"
+
+    - name: Check result
+      if: inputs.fail-on-malicious == 'true' && steps.classify.outputs.is_malicious == 'true'
+      shell: bash
+      run: |
+        echo "::error::Prompt injection attack detected with confidence ${{ steps.classify.outputs.confidence }}"
+        exit 1
