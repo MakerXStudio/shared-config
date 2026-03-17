@@ -104,7 +104,7 @@ jobs:
       
       # working dir doesn't apply to this, so we are explicit here
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.working-directory }}/${{ inputs.artifact-name }}.zip

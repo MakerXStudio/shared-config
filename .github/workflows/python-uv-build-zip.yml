@@ -94,7 +94,7 @@ jobs:
           zip -q -r ${{ runner.temp }}/${{ inputs.artifact-name }}.zip ${{ inputs.build-globs }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ runner.temp }}/${{ inputs.artifact-name }}.zip
