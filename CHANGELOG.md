@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.1](https://github.com/MakerXStudio/shared-config/compare/v1.2.0...v1.2.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* add extraction step to bridge download-artifact v8 directory layout ([fc1489a](https://github.com/MakerXStudio/shared-config/commit/fc1489a19b726151fb3cdb1dd9379e7eec1cdc66))
+* add skip-decompress and extraction for download-artifact v8 ([8ec799c](https://github.com/MakerXStudio/shared-config/commit/8ec799cc31b99140775288b6b75b074048d14af9))
+* add skip-decompress to download-artifact v8 calls ([51ce4b4](https://github.com/MakerXStudio/shared-config/commit/51ce4b439221ca844f1edffd9af4dad48b4a7c51))
+* add skip-decompress to download-artifact v8 calls ([8b8a1a4](https://github.com/MakerXStudio/shared-config/commit/8b8a1a439932f3a469c1219596f0b1736f27dc0e))
+* remove manual unzip steps for download-artifact v8 compatibility ([c504182](https://github.com/MakerXStudio/shared-config/commit/c504182e9e522fdc732368da2f2c86fc1d8f5358))
+* remove manual unzip steps for download-artifact v8 compatibility ([4d40113](https://github.com/MakerXStudio/shared-config/commit/4d40113155fe1ee11fc8e40131f13b03a2c4fe7c))
+
 ## [1.2.0](https://github.com/MakerXStudio/shared-config/compare/v1.1.0...v1.2.0) (2026-04-02)
 
 
