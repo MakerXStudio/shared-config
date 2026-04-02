@@ -44,7 +44,14 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: ${{ inputs.artifact-name }}
+          path: artifact-download
           skip-decompress: true
+
+      - name: Extract artifact archive
+        run: |
+          unzip -q artifact-download/${{ inputs.artifact-name }}.zip -d .
+          rm -rf artifact-download
+        shell: bash
 
       - name: 'Deploy to Azure WebApp'
         id: deploy-to-webapp
