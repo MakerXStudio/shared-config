@@ -12,7 +12,7 @@ on:
       - '.github/actions/**'
   workflow_call:
     inputs:
-      whitelist:
+      allowlist:
         description: 'Newline-separated list of allowed owners or repositories. Optional.'
         type: string
         required: false
@@ -54,7 +54,7 @@ jobs:
         id: pinned-actions
         uses: makerxstudio/shared-config/.github/actions/ensure-sha-pinned-actions@99eae033c9e92937a68983ca93fa383545c8b19f 
         with:
-          whitelist: ${{ inputs.whitelist }}
+          allowlist: ${{ inputs.allowlist }}
           exemptions: ${{ inputs.exemptions }}
           dry_run: ${{ inputs.dry_run || 'true' }}
           workflows-path: ${{ inputs.workflows-path || '.github/workflows' }}

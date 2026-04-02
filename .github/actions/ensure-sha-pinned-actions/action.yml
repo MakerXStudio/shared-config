@@ -2,7 +2,7 @@ name: Ensure SHA Pinned Actions
 description: Ensure that GitHub Actions are allowed and pinned to full length commit SHAs
 
 inputs:
-  whitelist:
+  allowlist:
     description: 'Newline-separated list of allowed owners or repositories. Use "actions/" to allow an owner prefix, or "actions/checkout" to allow a repository (including any subpath). Optional. Default: allow all.'
     required: false
     default: ''
@@ -43,7 +43,7 @@ runs:
       id: check
       shell: bash
       env:
-        INPUT_WHITELIST: ${{ inputs.whitelist }}
+        INPUT_ALLOWLIST: ${{ inputs.allowlist }}
         INPUT_EXEMPTIONS: ${{ inputs.exemptions }}
         INPUT_DRY_RUN: ${{ inputs.dry_run }}
         INPUT_WORKFLOWS_PATH: ${{ inputs.workflows-path }}
@@ -154,10 +154,10 @@ runs:
           local action_ref
           action_ref="$(extract_action_ref "$uses")"
 
-          # Enforce whitelist first, if configured
-          if has_any_rules "$INPUT_WHITELIST"; then
-            if ! matches_rules "$action_ref" "$INPUT_WHITELIST"; then
-              emit_issue "$file" "$uses is not in the whitelist of allowed actions."
+          # Enforce allowlist first, if configured
+          if has_any_rules "$INPUT_ALLOWLIST"; then
+            if ! matches_rules "$action_ref" "$INPUT_ALLOWLIST"; then
+              emit_issue "$file" "$uses is not in the allowlist of allowed actions."
               return 1
             fi
           fi

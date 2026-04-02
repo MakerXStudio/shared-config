@@ -3,16 +3,16 @@
 
 This action validates GitHub Actions usage in workflow files and composite actions. It can enforce two independent controls:
 
-- **Allowed usage** via `whitelist`
+- **Allowed usage** via `allowlist`
 - **Pinning enforcement** via `exemptions`
 
-`whitelist` determines which remote actions may be used in the repository at all. `exemptions` determines which actions are allowed to skip full SHA or digest pinning. These are intentionally separate so that an action can be allowed without also being exempt from pinning requirements.
+`allowlist` determines which remote actions may be used in the repository at all. `exemptions` determines which actions are allowed to skip full SHA or digest pinning. These are intentionally separate so that an action can be allowed without also being exempt from pinning requirements.
 
 ### Inputs
 
 | Input | Description | Default |
 |---|---|---|
-| `whitelist` | Newline-separated list of allowed owners or repositories. Use `actions/` to allow an owner prefix, or `actions/checkout` to allow a repository including any subpath. Empty means allow all. | `''` |
+| `allowlist` | Newline-separated list of allowed owners or repositories. Use `actions/` to allow an owner prefix, or `actions/checkout` to allow a repository including any subpath. Empty means allow all. | `''` |
 | `exemptions` | Newline-separated list of owners or repositories exempt from SHA or digest pinning enforcement. Empty means exempt none. | `''` |
 | `dry_run` | When `true`, findings are emitted as warnings and the job does not fail. | `'false'` |
 | `workflows-path` | Path to the workflows directory to scan. | `.github/workflows` |
@@ -20,19 +20,19 @@ This action validates GitHub Actions usage in workflow files and composite actio
 
 ## Rule Semantics
 
-### Whitelist
+### Allowlist
 
-The `whitelist` controls whether a remote action is permitted to be used.
+The `allowlist` controls whether a remote action is permitted to be used.
 
-- If `whitelist` is empty, all remote actions are allowed.
-- If `whitelist` is non-empty, every remote action must match at least one rule.
+- If `allowlist` is empty, all remote actions are allowed.
+- If `allowlist` is non-empty, every remote action must match at least one rule.
 
 ### Exemptions
 
 The `exemptions` input controls whether an allowed action may skip pinning enforcement.
 
 - If `exemptions` is empty, no actions are exempt.
-- If an action matches `exemptions`, it is still subject to `whitelist` checks.
+- If an action matches `exemptions`, it is still subject to `allowlist` checks.
 - Exemptions do **not** bypass allowed-usage policy.
 
 ### Matching behavior
@@ -96,7 +96,7 @@ Behavior:
 - name: Validate GitHub Actions usage
   uses: ./.github/actions/ensure-sha-pinned-actions
   with:
-    whitelist: |
+    allowlist: |
       actions/
 ```
 
@@ -111,7 +111,7 @@ Behavior:
 - name: Validate GitHub Actions usage
   uses: ./.github/actions/ensure-sha-pinned-actions
   with:
-    whitelist: |
+    allowlist: |
       actions/checkout
       actions/setup-node
       github/codeql-action
@@ -140,13 +140,13 @@ Behavior:
 * `actions/checkout` and `actions/setup-node` may use tag refs such as `@v4`
 * everything else must still be pinned
 
-### Combine whitelist and exemptions
+### Combine allowlist and exemptions
 
 ```yaml
 - name: Validate GitHub Actions usage
   uses: ./.github/actions/ensure-sha-pinned-actions
   with:
-    whitelist: |
+    allowlist: |
       actions/
       github/codeql-action
     exemptions: |
@@ -175,7 +175,7 @@ Behavior:
 
 ## Expected Results
 
-| `uses:` value                                                                             | whitelist              | exemptions         | Result |
+| `uses:` value                                                                             | allowlist              | exemptions         | Result |
 | ----------------------------------------------------------------------------------------- | ---------------------- | ------------------ | ------ |
 | `actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608`                               | empty                  | empty              | Pass   |
 | `actions/checkout@v4`                                                                     | empty                  | empty              | Fail   |
@@ -190,7 +190,7 @@ Behavior:
 
 ## Notes
 
-* Use `whitelist` to define what is allowed in the repository.
+* Use `allowlist` to define what is allowed in the repository.
 * Use `exemptions` only for actions that are intentionally permitted to avoid pinning checks.
 * Keeping these controls separate makes the policy easier to reason about and avoids accidentally turning “allowed” into “ignored.” 
 
