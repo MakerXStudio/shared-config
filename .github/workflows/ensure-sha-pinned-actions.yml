@@ -1,0 +1,95 @@
+name: Ensure SHA Pinned Actions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  workflow_call:
+    inputs:
+      whitelist:
+        description: 'Newline-separated list of allowed owners or repositories. Optional.'
+        type: string
+        required: false
+        default: ''
+      exemptions:
+        description: 'Newline-separated list of owners or repositories exempt from SHA pinning. Optional.'
+        type: string
+        required: false
+        default: ''
+      dry_run:
+        description: 'Set to `true` to show warnings instead of failing. Optional.'
+        type: string
+        required: false
+        default: 'false'
+      workflows-path:
+        description: 'Path to workflows directory'
+        type: string
+        required: false
+        default: '.github/workflows'
+      actions-path:
+        description: 'Path to actions directory'
+        type: string
+        required: false
+        default: '.github/actions'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ensure-sha-pinned:
+    name: Ensure SHA Pinned Actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Ensure SHA pinned actions
+        id: pinned-actions
+        uses: ./.github/actions/ensure-sha-pinned-actions
+        with:
+          whitelist: ${{ inputs.whitelist }}
+          exemptions: ${{ inputs.exemptions }}
+          dry_run: ${{ inputs.dry_run || 'true' }}
+          workflows-path: ${{ inputs.workflows-path || '.github/workflows' }}
+          actions-path: ${{ inputs.actions-path || '.github/actions' }}
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = '<!-- sha-pinned-actions-report -->';
+            const body = `${marker}\n${process.env.ISSUES_MARKDOWN}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+        env:
+          ISSUES_MARKDOWN: ${{ steps.pinned-actions.outputs.issues-markdown }}

@@ -1,0 +1,323 @@
+name: Ensure SHA Pinned Actions
+description: Ensure that GitHub Actions are allowed and pinned to full length commit SHAs
+
+inputs:
+  whitelist:
+    description: 'Newline-separated list of allowed owners or repositories. Use "actions/" to allow an owner prefix, or "actions/checkout" to allow a repository (including any subpath). Optional. Default: allow all.'
+    required: false
+    default: ''
+  exemptions:
+    description: 'Newline-separated list of owners or repositories exempt from SHA/digest pinning enforcement. Use "actions/" to exempt an owner prefix, or "actions/checkout" to exempt a repository (including any subpath). Optional. Default: exempt none.'
+    required: false
+    default: ''
+  dry_run:
+    description: 'Set to `true` to show warnings instead of failing. Optional. Default: `false`'
+    required: false
+    default: 'false'
+  workflows-path:
+    description: 'Path to workflows directory'
+    required: false
+    default: '.github/workflows'
+  actions-path:
+    description: 'Path to actions directory'
+    required: false
+    default: '.github/actions'
+
+outputs:
+  issues-markdown:
+    description: 'Markdown-formatted table of issues found, suitable for PR comments'
+    value: ${{ steps.check.outputs.issues-markdown }}
+  has-issues:
+    description: 'Whether any issues were found (true/false)'
+    value: ${{ steps.check.outputs.has-issues }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Ensure PyYAML is available
+      shell: bash
+      run: python3 -c "import yaml" 2>/dev/null || pip install pyyaml -q
+
+    - name: Check allowed and SHA pinned actions
+      id: check
+      shell: bash
+      env:
+        INPUT_WHITELIST: ${{ inputs.whitelist }}
+        INPUT_EXEMPTIONS: ${{ inputs.exemptions }}
+        INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        INPUT_WORKFLOWS_PATH: ${{ inputs.workflows-path }}
+        INPUT_ACTIONS_PATH: ${{ inputs.actions-path }}
+      run: |
+        set -uo pipefail
+
+        SHA1_PATTERN='^[a-fA-F0-9]{40}$'
+        DOCKER_DIGEST_PATTERN='@sha256:[a-fA-F0-9]{64}$'
+
+        has_error=false
+        issues_found=0
+        files_scanned=0
+        ISSUES_FILE="$(mktemp)"
+
+        is_true() {
+          [[ "${1,,}" == "true" ]]
+        }
+
+        trim() {
+          local value="$1"
+          value="${value#"${value%%[![:space:]]*}"}"
+          value="${value%"${value##*[![:space:]]}"}"
+          printf '%s' "$value"
+        }
+
+        emit_issue() {
+          local file="$1"
+          local message="$2"
+
+          if is_true "$INPUT_DRY_RUN"; then
+            echo "::warning file=$file::$message"
+          else
+            echo "::error file=$file::$message"
+          fi
+
+          # Record for markdown output
+          printf '%s\t%s\n' "$file" "$message" >> "$ISSUES_FILE"
+
+          has_error=true
+          issues_found=$((issues_found + 1))
+        }
+
+        is_local_reference() {
+          local uses="$1"
+          [[ "$uses" == ./* || "$uses" == ../* ]]
+        }
+
+        has_any_rules() {
+          local rules="$1"
+          local line
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            line="$(trim "$line")"
+            [[ -n "$line" ]] && return 0
+          done <<< "$rules"
+          return 1
+        }
+
+        matches_rules() {
+          local action_ref="$1"
+          local rules="$2"
+          local action_repo
+          action_repo="$(cut -d'/' -f1-2 <<< "$action_ref")"
+
+          local rule
+          while IFS= read -r rule || [[ -n "$rule" ]]; do
+            rule="$(trim "$rule")"
+            [[ -z "$rule" ]] && continue
+
+            # owner/ => prefix match on full action ref
+            if [[ "$rule" == */ ]]; then
+              [[ "$action_ref" == "$rule"* ]] && return 0
+              continue
+            fi
+
+            # owner/repo => exact repo match, including subpaths in that repo
+            if [[ "$action_repo" == "$rule" || "$action_ref" == "$rule" || "$action_ref" == "$rule/"* ]]; then
+              return 0
+            fi
+          done <<< "$rules"
+
+          return 1
+        }
+
+        extract_action_ref() {
+          local uses="$1"
+
+          if [[ "$uses" == docker://* ]]; then
+            printf '%s' "$uses"
+          elif [[ "$uses" == *"@"* ]]; then
+            printf '%s' "${uses%%@*}"
+          else
+            printf '%s' "$uses"
+          fi
+        }
+
+        check_uses() {
+          local uses="$1"
+          local file="$2"
+
+          uses="$(trim "$uses")"
+
+          # Skip empty / null / local references
+          if [[ -z "$uses" || "$uses" == "null" ]] || is_local_reference "$uses"; then
+            return 0
+          fi
+
+          local action_ref
+          action_ref="$(extract_action_ref "$uses")"
+
+          # Enforce whitelist first, if configured
+          if has_any_rules "$INPUT_WHITELIST"; then
+            if ! matches_rules "$action_ref" "$INPUT_WHITELIST"; then
+              emit_issue "$file" "$uses is not in the whitelist of allowed actions."
+              return 1
+            fi
+          fi
+
+          # Exemptions skip pinning enforcement only
+          if matches_rules "$action_ref" "$INPUT_EXEMPTIONS"; then
+            echo "  [info] $action_ref matched pinning exemptions — skipping pinning check."
+            return 0
+          fi
+
+          # Docker references must be pinned by digest
+          if [[ "$uses" == docker://* ]]; then
+            if [[ "$uses" =~ $DOCKER_DIGEST_PATTERN ]]; then
+              return 0
+            fi
+
+            emit_issue "$file" "$uses is not pinned to a sha256 digest."
+            return 1
+          fi
+
+          # Remote GitHub actions / reusable workflows must have an @ref
+          if [[ "$uses" != *"@"* ]]; then
+            emit_issue "$file" "$uses is missing an @ref."
+            return 1
+          fi
+
+          local version="${uses#*@}"
+          if [[ ! "$version" =~ $SHA1_PATTERN ]]; then
+            emit_issue "$file" "$uses is not pinned to a full length commit SHA."
+            return 1
+          fi
+
+          return 0
+        }
+
+        extract_uses_from_file() {
+          local file="$1"
+          local mode="$2" # "workflow" or "action"
+
+          python3 -c "
+        import yaml, sys
+        try:
+            with open(sys.argv[1]) as f:
+                doc = yaml.safe_load(f)
+            if not isinstance(doc, dict):
+                sys.exit(0)
+            if sys.argv[2] == 'workflow':
+                for job in (doc.get('jobs') or {}).values():
+                    if not isinstance(job, dict):
+                        continue
+                    uses = job.get('uses')
+                    if uses:
+                        print(uses)
+                    for step in job.get('steps') or []:
+                        if isinstance(step, dict) and step.get('uses'):
+                            print(step['uses'])
+            else:
+                runs = doc.get('runs') or {}
+                for step in runs.get('steps') or []:
+                    if isinstance(step, dict) and step.get('uses'):
+                        print(step['uses'])
+        except Exception as e:
+            print(f'ERROR:{e}', file=sys.stderr)
+            sys.exit(1)
+        " "$file" "$mode"
+        }
+
+        check_file() {
+          local file="$1"
+          local mode="$2"
+          files_scanned=$((files_scanned + 1))
+
+          echo "::group::$file"
+          local before_count="$issues_found"
+
+          local output
+          if ! output="$(extract_uses_from_file "$file" "$mode" 2>&1)"; then
+            emit_issue "$file" "Failed to parse YAML: $output"
+            echo "::endgroup::"
+            return 1
+          fi
+
+          if [[ -n "$output" ]]; then
+            local uses
+            while IFS= read -r uses; do
+              [[ -z "$uses" ]] && continue
+              check_uses "$uses" "$file" || true
+            done <<< "$output"
+          fi
+
+          if [[ "$issues_found" -eq "$before_count" ]]; then
+            echo "  No issues were found."
+          fi
+
+          echo "::endgroup::"
+        }
+
+        if ! command -v python3 >/dev/null 2>&1; then
+          echo "::error::python3 is required but not installed on this runner."
+          exit 1
+        fi
+
+        echo "Scanning workflows in $INPUT_WORKFLOWS_PATH..."
+        if [[ -d "$INPUT_WORKFLOWS_PATH" ]]; then
+          while IFS= read -r -d '' file; do
+            check_file "$file" "workflow"
+          done < <(find "$INPUT_WORKFLOWS_PATH" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
+        else
+          echo "  [info] Workflows path does not exist: $INPUT_WORKFLOWS_PATH"
+        fi
+
+        echo "Scanning actions in $INPUT_ACTIONS_PATH..."
+        if [[ -d "$INPUT_ACTIONS_PATH" ]]; then
+          while IFS= read -r -d '' file; do
+            check_file "$file" "action"
+          done < <(find "$INPUT_ACTIONS_PATH" -type f \( -name 'action.yml' -o -name 'action.yaml' \) -print0)
+        else
+          echo "  [info] Actions path does not exist: $INPUT_ACTIONS_PATH"
+        fi
+
+        if [[ "$files_scanned" -eq 0 ]]; then
+          echo "No workflow or composite action files were found."
+        fi
+
+        # Generate markdown output
+        if [[ "$has_error" == true ]]; then
+          {
+            echo "issues-markdown<<GITHUB_OUTPUT_EOF"
+            echo "### :shield: SHA Pinned Actions Report"
+            echo ""
+            echo "Found **$issues_found** issue(s) across **$files_scanned** file(s) scanned."
+            echo ""
+            echo "| File | Issue |"
+            echo "| --- | --- |"
+            while IFS=$'\t' read -r file message; do
+              echo "| \`$file\` | $message |"
+            done < "$ISSUES_FILE"
+            echo "GITHUB_OUTPUT_EOF"
+            echo "has-issues=true"
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "issues-markdown<<GITHUB_OUTPUT_EOF"
+            echo "### :shield: SHA Pinned Actions Report"
+            echo ""
+            echo ":white_check_mark: All **$files_scanned** file(s) passed — actions are allowed and pinned as required."
+            echo "GITHUB_OUTPUT_EOF"
+            echo "has-issues=false"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+        rm -f "$ISSUES_FILE"
+
+        if [[ "$has_error" == true ]]; then
+          if is_true "$INPUT_DRY_RUN"; then
+            echo "Warnings were found but dry_run is enabled — not failing."
+          else
+            echo "::error::At least one workflow or composite action contains a disallowed, unpinned, or malformed action reference."
+            exit 1
+          fi
+        else
+          echo "All checked actions are allowed and pinned as required."
+        fi
