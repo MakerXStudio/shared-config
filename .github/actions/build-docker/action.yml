@@ -46,7 +46,7 @@ runs:
 
     - name: Set up Docker Buildx
       if: inputs.use-buildkit == 'true'
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build
       shell: bash
