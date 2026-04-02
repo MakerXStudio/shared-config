@@ -81,7 +81,7 @@ This is the strictest mode.
   uses: ./.github/actions/ensure-sha-pinned-actions
   with:
     dry_run: false
-````
+```
 
 Behavior:
 

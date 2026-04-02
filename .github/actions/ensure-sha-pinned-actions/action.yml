@@ -52,7 +52,7 @@ runs:
         set -uo pipefail
 
         SHA1_PATTERN='^[a-fA-F0-9]{40}$'
-        SHA256_PATTERN='^[a-fA-F0-9]{64}$'
+        DOCKER_DIGEST_PATTERN='@sha256:[a-fA-F0-9]{64}$'
 
         has_error=false
         issues_found=0
@@ -170,7 +170,7 @@ runs:
 
           # Docker references must be pinned by digest
           if [[ "$uses" == docker://* ]]; then
-            if [[ "$uses" =~ @sha256:$SHA256_PATTERN ]]; then
+            if [[ "$uses" =~ $DOCKER_DIGEST_PATTERN ]]; then
               return 0
             fi
 
