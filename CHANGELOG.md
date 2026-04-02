@@ -7,6 +7,7 @@
 
 * pin all GitHub Actions to full-length commit SHAs ([99eae03](https://github.com/MakerXStudio/shared-config/commit/99eae033c9e92937a68983ca93fa383545c8b19f))
 * pin all GitHub Actions to full-length commit SHAs ([950e6b5](https://github.com/MakerXStudio/shared-config/commit/950e6b52eb3fb8683b8063eadaf2e6fd4519b63c))
+* Updated all dependant GitHub actions to the latest versions - most of it is upgrading to Node24
 
 
 ### Bug Fixes
