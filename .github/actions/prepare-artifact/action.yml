@@ -38,6 +38,7 @@ runs:
       with:
         path: ${{ inputs.artifacts-path }}
         pattern: ${{ inputs.artifact-pattern }}
+        skip-decompress: true
 
     - name: Unzip app artifacts and apply transforms
       run: |
