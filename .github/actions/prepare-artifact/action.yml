@@ -1,5 +1,5 @@
 name: Prepare Artifact
-description: Downloads artifacts and performs static site transforms
+description: Downloads artifacts, unzips them, and performs static site transforms
 inputs:
   app-artifact-unzips:
     description: |
@@ -38,6 +38,7 @@ runs:
       with:
         path: ${{ inputs.artifacts-path }}
         pattern: ${{ inputs.artifact-pattern }}
+        skip-decompress: true
 
     - name: Unzip app artifacts and apply transforms
       run: |
@@ -65,7 +66,7 @@ runs:
           done
         fi
 
-        # Copy app artifacts (download-artifact v8 auto-decompresses zips)
+        # Extract app artifacts
         if [ ! -z "${{ inputs.app-artifact-unzips }}" ]
         then
           echo "Processing artifact unzips..."
@@ -78,15 +79,20 @@ runs:
               IFS=':' read -ra pair <<< "$trimmed"
               artifact_name="${pair[0]}"
               destination="${pair[1]}"
-
+              
               if [ ! -z "$artifact_name" ] && [ ! -z "$destination" ]
               then
                 echo "Processing artifact: $artifact_name -> $destination"
-
+                
                 # Create destination directory
                 mkdir -p "$destination"
-
-                if [ -d "${{ inputs.artifacts-path }}/$artifact_name" ]
+                
+                # Check if artifact exists as zip file
+                if [ -f "${{ inputs.artifacts-path }}/$artifact_name/$artifact_name.zip" ]
+                then
+                  echo "Unzipping: ${{ inputs.artifacts-path }}/$artifact_name/$artifact_name.zip to $destination"
+                  unzip -q "${{ inputs.artifacts-path }}/$artifact_name/$artifact_name.zip" -d "$destination"
+                elif [ -d "${{ inputs.artifacts-path }}/$artifact_name" ]
                 then
                   echo "Copying directory: ${{ inputs.artifacts-path }}/$artifact_name to $destination"
                   cp -r "${{ inputs.artifacts-path }}/$artifact_name"/* "$destination"/
