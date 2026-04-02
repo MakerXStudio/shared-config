@@ -40,6 +40,17 @@ runs:
         pattern: ${{ inputs.artifact-pattern }}
         skip-decompress: true
 
+    - name: Extract artifact archives
+      run: |
+        for zip in ${{ inputs.artifacts-path }}/*.zip; do
+          [ -f "$zip" ] || continue
+          name=$(basename "$zip" .zip)
+          mkdir -p "${{ inputs.artifacts-path }}/$name"
+          unzip -q "$zip" -d "${{ inputs.artifacts-path }}/$name"
+          rm "$zip"
+        done
+      shell: bash
+
     - name: Unzip app artifacts and apply transforms
       run: |
         # Configure static site transforms if provided

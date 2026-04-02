@@ -51,6 +51,17 @@ runs:
         path: artifacts
         skip-decompress: true
 
+    - name: Extract artifact archives
+      run: |
+        for zip in artifacts/*.zip; do
+          [ -f "$zip" ] || continue
+          name=$(basename "$zip" .zip)
+          mkdir -p "artifacts/$name"
+          unzip -q "$zip" -d "artifacts/$name"
+          rm "$zip"
+        done
+      shell: bash
+
     - name: Unzip infrastructure artifact
       run: unzip -q artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ${{ inputs.infrastructure-artifact-name }}
       shell: bash
