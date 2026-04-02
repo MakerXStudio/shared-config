@@ -50,8 +50,8 @@ runs:
       with:
         path: artifacts
 
-    - name: Prepare infrastructure artifact
-      run: cp -r artifacts/${{ inputs.infrastructure-artifact-name }} ${{ inputs.infrastructure-artifact-name }}
+    - name: Unzip infrastructure artifact
+      run: unzip -q artifacts/${{ inputs.infrastructure-artifact-name }}/${{ inputs.infrastructure-artifact-name }}.zip -d ${{ inputs.infrastructure-artifact-name }}
       shell: bash
 
     - name: Rebuild infrastructure node_modules
@@ -59,7 +59,7 @@ runs:
       run: npm rebuild && npm run prepare --if-present
       working-directory: ${{ inputs.infrastructure-artifact-name }}
 
-    - name: Prepare app artifacts
+    - name: Unzip app artifacts
       run: |
         # Configure static site transforms if provided
         if [ ! -z "${{ inputs.static-site-transforms }}" ]
@@ -78,16 +78,16 @@ runs:
         fi
         if [ ! -z "${{ inputs.app-artifact-unzips }}" ]
         then
-          # Copy app artifacts (download-artifact v8 auto-decompresses zips)
+          # Extract app artifacts
           readarray -t lines <<<"${{ inputs.app-artifact-unzips }}"
           for i in "${!lines[@]}"
           do
             trimmed="$(echo -e "${lines[i]}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
             IFS=':' read -ra pair <<< "$trimmed"
             mkdir -p "${pair[1]}"
-            cp -r "artifacts/${pair[0]}"/* "${pair[1]}"/
-
-            # Apply static site transforms if provided
+            unzip -q "artifacts/${pair[0]}/${pair[0]}.zip" -d "${pair[1]}"
+  
+            # Apply static site transforms if provided 
             if [ ! -z "$replacements" ]
             then
               find "${pair[1]}" -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "$replacements" {} \;

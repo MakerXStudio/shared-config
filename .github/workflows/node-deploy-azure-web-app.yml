@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: node-app
+      artifact-file-name:
+        required: false
+        type: string
+        default: 'node-app.zip'
       environment-name:
         required: false
         default: 'Development'
@@ -40,7 +44,6 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: ${{ inputs.artifact-name }}
-          path: ${{ inputs.artifact-name }}
 
       - name: 'Deploy to Azure WebApp'
         id: deploy-to-webapp
@@ -48,4 +51,4 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ${{ inputs.artifact-name }}
+          package: ${{ inputs.artifact-file-name }}
