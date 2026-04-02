@@ -6,7 +6,7 @@ This action validates GitHub Actions usage in workflow files and composite actio
 - **Allowed usage** via `whitelist`
 - **Pinning enforcement** via `exemptions`
 
-`whitelist` determines which remote actions may be used in the repository at all. `exemptions` determines which actions are allowed to skip full SHA or digest pinning. These are intentionally separate so that an action can be allowed without also being exempt from pinning requirements. :contentReference[oaicite:0]{index=0}
+`whitelist` determines which remote actions may be used in the repository at all. `exemptions` determines which actions are allowed to skip full SHA or digest pinning. These are intentionally separate so that an action can be allowed without also being exempt from pinning requirements.
 
 ### Inputs
 
