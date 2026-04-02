@@ -52,7 +52,7 @@ jobs:
 
       - name: Ensure SHA pinned actions
         id: pinned-actions
-        uses: ./.github/actions/ensure-sha-pinned-actions
+        uses: makerxstudio/shared-config/.github/actions/ensure-sha-pinned-actions@99eae033c9e92937a68983ca93fa383545c8b19f 
         with:
           whitelist: ${{ inputs.whitelist }}
           exemptions: ${{ inputs.exemptions }}
