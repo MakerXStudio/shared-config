@@ -75,13 +75,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
       # setup node + private repo access
       - name: Use Node.js ${{ inputs.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ inputs.node-version }}
           registry-url: 'https://npm.pkg.github.com'
@@ -122,7 +122,7 @@ jobs:
         #Requires permissions.checks: write
       - name: Publish test results
         if: ${{ always() && inputs.output-test-results }}
-        uses: phoenix-actions/test-reporting@v15
+        uses: phoenix-actions/test-reporting@f957cd93fc2d848d556fa0d03c57bc79127b6b5e # v15
         with:
           name: Test results
           path: ${{ inputs.test-results-file-pattern }}

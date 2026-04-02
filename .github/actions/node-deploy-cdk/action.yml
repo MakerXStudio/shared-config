@@ -46,7 +46,7 @@ runs:
   using: composite
   steps:
     - name: Download artifacts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
       with:
         path: artifacts
 
@@ -97,13 +97,13 @@ runs:
       shell: bash
 
     - name: Use Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         node-version: ${{ inputs.node-version }}
 
     - name: Configure AWS Credentials (access key)
       if: ${{ inputs.aws-access-key-id && inputs.aws-secret-access-key }}
-      uses: aws-actions/configure-aws-credentials@v5
+      uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
       with:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
@@ -111,7 +111,7 @@ runs:
 
     - name: Configure AWS Credentials (GitHub federation)
       if: ${{ inputs.aws-account-id && inputs.aws-role-name }}
-      uses: aws-actions/configure-aws-credentials@v5
+      uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
       with:
         role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/${{ inputs.aws-role-name }}
         aws-region: ${{ inputs.aws-region }}
