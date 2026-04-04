@@ -52,7 +52,7 @@ jobs:
 
       - name: Ensure SHA pinned actions
         id: pinned-actions
-        uses: makerxstudio/shared-config/.github/actions/ensure-sha-pinned-actions@99eae033c9e92937a68983ca93fa383545c8b19f 
+        uses: makerxstudio/shared-config/.github/actions/ensure-sha-pinned-actions@332e464f2b340c06985960f71d63b79c3c61c025 # v1.2.1
         with:
           allowlist: ${{ inputs.allowlist }}
           exemptions: ${{ inputs.exemptions }}
@@ -61,7 +61,7 @@ jobs:
           actions-path: ${{ inputs.actions-path || '.github/actions' }}
 
       - name: Comment on PR
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
