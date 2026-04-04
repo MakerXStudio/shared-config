@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/MakerXStudio/shared-config/compare/v1.2.1...v1.2.2) (2026-04-04)
+
+
+### Bug Fixes
+
+* Always run the report comment on PRs ([d1b77bc](https://github.com/MakerXStudio/shared-config/commit/d1b77bcb0e010b74d339282e0c81b442ef364d60))
+* Always run the report comment on PRs even if the previous step fails ([ffeea84](https://github.com/MakerXStudio/shared-config/commit/ffeea84f82800e68e13881454008641f2ff00c92))
+
 ## [1.2.1](https://github.com/MakerXStudio/shared-config/compare/v1.2.0...v1.2.1) (2026-04-02)
 
 
