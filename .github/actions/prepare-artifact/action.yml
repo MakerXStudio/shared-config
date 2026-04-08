@@ -42,12 +42,14 @@ runs:
 
     - name: Extract artifact archives
       run: |
-        for zip in ${{ inputs.artifacts-path }}/*.zip; do
+        for zip in ${{ inputs.artifacts-path }}/*/*.zip; do
           [ -f "$zip" ] || continue
-          name=$(basename "$zip" .zip)
-          mkdir -p "${{ inputs.artifacts-path }}/$name"
-          unzip -q "$zip" -d "${{ inputs.artifacts-path }}/$name"
+          dir=$(dirname "$zip")
+          tmp=$(mktemp -d)
+          unzip -q "$zip" -d "$tmp"
           rm "$zip"
+          mv "$tmp"/* "$dir/"
+          rm -rf "$tmp"
         done
       shell: bash
 
