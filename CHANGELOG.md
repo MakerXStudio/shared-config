@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/MakerXStudio/shared-config/compare/v1.2.2...v1.3.0) (2026-04-08)
+
+
+### Features
+
+* Generate SBOM as part of NPM CI ([b3939a4](https://github.com/MakerXStudio/shared-config/commit/b3939a430a13d892bba1e515ceb01712d37ce4c1))
+* Generate SBOM during NPM CI process ([2a56218](https://github.com/MakerXStudio/shared-config/commit/2a562183b22cf10b459f392449e76b0e286cd4b6))
+
 ## [1.2.2](https://github.com/MakerXStudio/shared-config/compare/v1.2.1...v1.2.2) (2026-04-04)
 
 
