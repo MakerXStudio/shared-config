@@ -53,12 +53,14 @@ runs:
 
     - name: Extract artifact archives
       run: |
-        for zip in artifacts/*.zip; do
+        for zip in artifacts/*/*.zip; do
           [ -f "$zip" ] || continue
-          name=$(basename "$zip" .zip)
-          mkdir -p "artifacts/$name"
-          unzip -q "$zip" -d "artifacts/$name"
+          dir=$(dirname "$zip")
+          tmp=$(mktemp -d)
+          unzip -q "$zip" -d "$tmp"
           rm "$zip"
+          mv "$tmp"/* "$dir/"
+          rm -rf "$tmp"
         done
       shell: bash
 
