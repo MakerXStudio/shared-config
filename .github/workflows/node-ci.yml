@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload SBOM
         if: ${{ inputs.generate-sbom }}
-        uses: actions/upload-artifact@ea165f8d65b6db9a8b9c8367e0bf73e20c0e56e6 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sbom
           path: ${{ inputs.working-directory }}/sbom.${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
