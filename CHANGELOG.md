@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.1](https://github.com/MakerXStudio/shared-config/compare/v2.0.0...v2.0.1) (2026-04-08)
+
+
+### Bug Fixes
+
+* Update SBOM upload-artifact to v7 and add configurable artifact name ([52db57e](https://github.com/MakerXStudio/shared-config/commit/52db57e4686e5e860e8ac46dbbdc3bab2e01deff))
+* Update SBOM upload-artifact to v7 and add configurable artifact name ([c5b0499](https://github.com/MakerXStudio/shared-config/commit/c5b04996fe9efb4e844947f858cf0719338354bc))
+* update upload-artifact SHA to v4.6.2 ([53743ce](https://github.com/MakerXStudio/shared-config/commit/53743cec26e2fe244582d32b66b8681b866f7845))
+* update upload-artifact SHA to v4.6.2 ([20d282f](https://github.com/MakerXStudio/shared-config/commit/20d282fbb67862e88681bd36ac452bc38d7f80dc))
+
 ## [2.0.0](https://github.com/MakerXStudio/shared-config/compare/v1.3.0...v2.0.0) (2026-04-08)
 
 
