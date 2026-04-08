@@ -67,6 +67,10 @@ on:
         required: false
         type: string
         default: spdx
+      sbom-artifact-name:
+        required: false
+        type: string
+        default: sbom
     secrets:
       npm-auth-token:
         description: NPM auth token (don't pass in on a PR build on a public repository)
@@ -156,11 +160,11 @@ jobs:
 
       - name: Generate SBOM
         if: ${{ inputs.generate-sbom }}
-        run: npm sbom --sbom-format ${{ inputs.sbom-format }} > sbom.${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
+        run: npm sbom --sbom-format ${{ inputs.sbom-format }} > ${{ inputs.sbom-artifact-name }}.${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
 
       - name: Upload SBOM
         if: ${{ inputs.generate-sbom }}
-        uses: actions/upload-artifact@ea165f8d65b6db9a8b9c8367e0bf73e20c0e56e6 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
-          name: sbom
-          path: ${{ inputs.working-directory }}/sbom.${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
+          name: ${{ inputs.sbom-artifact-name }}
+          path: ${{ inputs.working-directory }}/${{ inputs.sbom-artifact-name }}.${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
