@@ -67,6 +67,9 @@ on:
         required: false
         type: string
         default: spdx
+      sbom-flags:
+        required: false
+        type: string
       sbom-artifact-name:
         required: false
         type: string
@@ -155,12 +158,19 @@ jobs:
       - name: Validate SBOM format
         if: ${{ inputs.generate-sbom && inputs.sbom-format != 'spdx' && inputs.sbom-format != 'cyclonedx' }}
         run: |
-          echo "::error::Invalid sbom-format '${{ inputs.sbom-format }}'. Must be 'spdx' or 'cyclonedx'."
+          echo "::error::Invalid sbom-format '${SBOM_FORMAT}'. Must be 'spdx' or 'cyclonedx'."
           exit 1
+        env:
+          SBOM_FORMAT: ${{ inputs.sbom-format }}
 
       - name: Generate SBOM
         if: ${{ inputs.generate-sbom }}
-        run: npm sbom --sbom-format ${{ inputs.sbom-format }} > ${{ inputs.sbom-artifact-name }}.${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
+        run: npm sbom --sbom-format "${SBOM_FORMAT}" ${SBOM_FLAGS} > "${SBOM_ARTIFACT_NAME}.${SBOM_EXT}"
+        env:
+          SBOM_FORMAT: ${{ inputs.sbom-format }}
+          SBOM_FLAGS: ${{ inputs.sbom-flags }}
+          SBOM_ARTIFACT_NAME: ${{ inputs.sbom-artifact-name }}
+          SBOM_EXT: ${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
 
       - name: Upload SBOM
         if: ${{ inputs.generate-sbom }}
