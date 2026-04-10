@@ -42,6 +42,16 @@ runs:
 
     - name: Extract artifact archives
       run: |
+        # When skip-decompress is true, download-artifact v8 places zips flat
+        # at artifacts/<name>.zip instead of artifacts/<name>/<name>.zip.
+        # Normalise flat zips into the nested structure the rest of the action expects.
+        for zip in ${{ inputs.artifacts-path }}/*.zip; do
+          [ -f "$zip" ] || continue
+          name=$(basename "$zip" .zip)
+          mkdir -p "${{ inputs.artifacts-path }}/$name"
+          mv "$zip" "${{ inputs.artifacts-path }}/$name/$name.zip"
+        done
+
         for zip in ${{ inputs.artifacts-path }}/*/*.zip; do
           [ -f "$zip" ] || continue
           dir=$(dirname "$zip")
