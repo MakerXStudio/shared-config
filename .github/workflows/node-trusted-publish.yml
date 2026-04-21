@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: 'restricted' # 'public' or 'restricted'
+      tag:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   node-publish:
@@ -53,3 +57,4 @@ jobs:
         with:
           package: ${{ inputs.package-path }}
           access: ${{ inputs.access }}
+          tag: ${{ inputs.tag }}
