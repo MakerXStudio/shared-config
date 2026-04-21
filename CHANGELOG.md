@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0](https://github.com/MakerXStudio/shared-config/compare/v2.0.1...v2.1.0) (2026-04-21)
+
+
+### Features
+
+* Add sbom-flags input and harden SBOM steps ([a4ff264](https://github.com/MakerXStudio/shared-config/commit/a4ff2644de653c9da3bf29f438653168ae36af95))
+* Add sbom-flags input and harden SBOM steps against command injection ([9e60a18](https://github.com/MakerXStudio/shared-config/commit/9e60a1834304da21d80578180a19f5804f54c970))
+
+
+### Bug Fixes
+
+* correct artifact extraction glob for download-artifact v8 ([e07f75b](https://github.com/MakerXStudio/shared-config/commit/e07f75b69c9dbc8f174d62931a3c8343bf0074db))
+* correct artifact extraction glob for download-artifact v8 ([3d419a9](https://github.com/MakerXStudio/shared-config/commit/3d419a968804aa1e523493c55633de108e7f5ba5))
+
 ## [2.0.1](https://github.com/MakerXStudio/shared-config/compare/v2.0.0...v2.0.1) (2026-04-08)
 
 
