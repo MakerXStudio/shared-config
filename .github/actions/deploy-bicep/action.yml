@@ -61,7 +61,7 @@ runs:
   using: 'composite'
   steps:
     - name: Run what-if for Bicep template
-      uses: azure/bicep-deploy@66910e9c5c7733c33a1cd605030d02234b3bc4ed # v2
+      uses: azure/bicep-deploy@66910e9c5c7733c33a1cd605030d02234b3bc4ed # v2.3.0
       if: ${{ inputs.run-what-if == 'true' }}
       with:
         type: deployment
@@ -87,7 +87,7 @@ runs:
 
     - name: Deploy Bicep template
       id: deploy-template
-      uses: azure/bicep-deploy@66910e9c5c7733c33a1cd605030d02234b3bc4ed # v2
+      uses: azure/bicep-deploy@66910e9c5c7733c33a1cd605030d02234b3bc4ed # v2.3.0
       with:
         type: deployment
         operation: create
