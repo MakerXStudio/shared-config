@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -215,7 +215,7 @@ jobs:
 
       - name: Publish coverage
         if: ${{ inputs.publish-coverage-path }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage
           path: ${{ inputs.publish-coverage-path }}
@@ -227,7 +227,7 @@ jobs:
         # Requires permissions.checks: write
       - name: Surface failing tests
         if: inputs.output-test-results && inputs.run-tests
-        uses: pmeier/pytest-results-action@fdc7f18d9934e38aca411ca9557e6577bd25ca9c
+        uses: pmeier/pytest-results-action@fdc7f18d9934e38aca411ca9557e6577bd25ca9c # v0.9.0
         with:
           path: ${{ inputs.test-results-file-pattern }}
 
