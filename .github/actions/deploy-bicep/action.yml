@@ -50,6 +50,9 @@ inputs:
     description: 'Whether to display template outputs; e.g. set to false to avoid ouputting secure outputs'
     required: false
     default: 'true'
+  bicep-version:
+    description: 'Bicep CLI version to install (e.g. ''0.43.1''). If unset, azure/bicep-deploy resolves https://downloads.bicep.azure.com/releases/latest at runtime, which is non-deterministic across runs.'
+    required: false
 outputs:
   deploymentOutputs:
     description: 'Outputs from the deployment as JSON string'
@@ -72,6 +75,7 @@ runs:
         template-file: ${{ inputs.template-file }}
         parameters-file: ${{ inputs.parameters-file }}
         parameters: ${{ inputs.parameters-json }}
+        bicep-version: ${{ inputs.bicep-version }}
 
     - name: Generate Azure Portal deployment link
       id: generate-link
@@ -95,6 +99,7 @@ runs:
         template-file: ${{ inputs.template-file }}
         parameters-file: ${{ inputs.parameters-file }}
         parameters: ${{ inputs.parameters-json }}
+        bicep-version: ${{ inputs.bicep-version }}
 
     - name: Output deployment outputs
       if: ${{ inputs.display-outputs == 'true' }}
