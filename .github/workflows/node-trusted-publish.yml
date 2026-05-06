@@ -5,6 +5,10 @@ on:
         required: false
         type: string
         default: 24.x
+      working-directory:
+        required: false
+        type: string
+        default: '.'
       package-path:
         required: false
         type: string
@@ -24,6 +28,12 @@ jobs:
     permissions:
       contents: read
       id-token: write  # Required for OIDC
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -35,6 +45,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: 'npm'
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
       - name: Ensure NPM 11.5.1 or higher
         run: |
