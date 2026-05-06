@@ -65,7 +65,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb
+        uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d
         with:
           version: ${{ inputs.pnpm-version }}
           standalone: true
