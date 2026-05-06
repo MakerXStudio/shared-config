@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.0](https://github.com/MakerXStudio/shared-config/compare/v2.1.0...v2.2.0) (2026-05-06)
+
+
+### Features
+
+* **deploy-bicep:** expose bicep-version input ([c7566de](https://github.com/MakerXStudio/shared-config/commit/c7566de91ca841d6efef0daf041a102dc8398426))
+* **deploy-bicep:** expose bicep-version input ([e991336](https://github.com/MakerXStudio/shared-config/commit/e991336a3ea91d5db5ab10d2184dbc7f87b2e31d))
+
 ## [2.1.0](https://github.com/MakerXStudio/shared-config/compare/v2.0.1...v2.1.0) (2026-05-06)
 
 
