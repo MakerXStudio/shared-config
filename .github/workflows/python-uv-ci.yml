@@ -1,6 +1,10 @@
 on:
   workflow_call:
     inputs:
+      runner:
+        required: false
+        type: string
+        default: ubuntu-latest
       python-version:
         required: false
         type: string
@@ -117,7 +121,7 @@ on:
 
 jobs:
   python-ci:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
 
     defaults:
       run:
