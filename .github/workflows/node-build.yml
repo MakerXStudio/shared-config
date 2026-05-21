@@ -1,6 +1,10 @@
 on:
   workflow_call:
     inputs:
+      runner:
+        required: false
+        type: string
+        default: ubuntu-latest
       node-version:
         required: false
         type: string
@@ -27,7 +31,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
 
     defaults:
       run:
