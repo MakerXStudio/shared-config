@@ -2,6 +2,10 @@ name: deploy-web-app
 on:
   workflow_call:
     inputs:
+      runner:
+        required: false
+        type: string
+        default: ubuntu-latest
       node-version:
         required: false
         type: string
@@ -34,7 +38,7 @@ jobs:
     name: ${{ inputs.environment-name }}
     permissions:
       contents: none
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     environment:
       name: ${{ inputs.environment-name }}
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
