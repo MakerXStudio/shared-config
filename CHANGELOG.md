@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.3.0](https://github.com/MakerXStudio/shared-config/compare/v2.2.0...v2.3.0) (2026-05-21)
+
+
+### Features
+
+* **ci:** parameterize github zendesk workflow runners ([3f56a50](https://github.com/MakerXStudio/shared-config/commit/3f56a50168c853dad3b3a3100bb6123fef236d47))
+* **ci:** parameterize node build workflow runners ([1f9c426](https://github.com/MakerXStudio/shared-config/commit/1f9c42678de1e7ace738924a86b9e51a35f77b49))
+* **ci:** parameterize node publish workflow runners ([45ff361](https://github.com/MakerXStudio/shared-config/commit/45ff361c0fdfb9215c32566e45c3487cebae7b62))
+* **ci:** parameterize python workflow runners ([caaed69](https://github.com/MakerXStudio/shared-config/commit/caaed693a3e76fe774732671d02faedb9cf84620))
+* **ci:** parameterize reusable workflow runners ([9cccf7a](https://github.com/MakerXStudio/shared-config/commit/9cccf7aec81b9c07d5e88a7d301bbf8346ea3b51))
+* **ci:** parameterize sha pinning workflow runner ([01ec026](https://github.com/MakerXStudio/shared-config/commit/01ec02679c4adc386ec47b3c8294aa07154898c3))
+* **ci:** parameterize zendesk github workflow runners ([ecc04d0](https://github.com/MakerXStudio/shared-config/commit/ecc04d001b4ead26cc3d74396a400f0805a3f994))
+
 ## [2.2.0](https://github.com/MakerXStudio/shared-config/compare/v2.1.0...v2.2.0) (2026-05-06)
 
 
