@@ -2,7 +2,7 @@ name: Close GitHub issue
 on:
   workflow_call:
     inputs:
-      runner:
+      runs-on:
         required: false
         type: string
         default: ubuntu-latest
@@ -11,7 +11,7 @@ permissions:
 jobs:
   close_issue:
     name: Close GitHub issue
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:

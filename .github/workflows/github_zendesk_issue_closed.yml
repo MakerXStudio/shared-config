@@ -2,7 +2,7 @@ name: Solve Zendesk ticket
 on:
   workflow_call:
     inputs:
-      runner:
+      runs-on:
         required: false
         type: string
         default: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
   solve-ticket:
     name: Solve Zendesk ticket
     if: ${{ contains(github.event.issue.labels.*.name, inputs.ISSUE_LABEL) }}
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - env:
           TENANT_NAME: ${{ inputs.ZENDESK_TENANT_NAME }}
