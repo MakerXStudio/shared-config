@@ -1,6 +1,10 @@
 on:
   workflow_call:
     inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
       node-version:
         required: false
         type: string
@@ -16,7 +20,7 @@ on:
 
 jobs:
   node-publish-public:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

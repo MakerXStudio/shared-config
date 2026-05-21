@@ -1,12 +1,17 @@
 name: Add comment to GitHub issue
 on:
   workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
 permissions:
   issues: write
 jobs:
   add-comment:
     name: Add comment to issue
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:

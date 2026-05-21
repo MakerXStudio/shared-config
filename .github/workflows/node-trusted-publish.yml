@@ -1,6 +1,10 @@
 on:
   workflow_call:
     inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
       node-version:
         required: false
         type: string
@@ -24,7 +28,7 @@ on:
 
 jobs:
   node-publish:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
       id-token: write  # Required for OIDC

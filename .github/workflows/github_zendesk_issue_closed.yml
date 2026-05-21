@@ -2,6 +2,10 @@ name: Solve Zendesk ticket
 on:
   workflow_call:
     inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
       ZENDESK_TENANT_NAME:
         description: 'The zendesk tenant name, can be found in the URL, for example https://my-subdomain.zendesk.com/'
         required: true
@@ -18,7 +22,7 @@ jobs:
   solve-ticket:
     name: Solve Zendesk ticket
     if: ${{ contains(github.event.issue.labels.*.name, inputs.ISSUE_LABEL) }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - env:
           TENANT_NAME: ${{ inputs.ZENDESK_TENANT_NAME }}
