@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.0](https://github.com/MakerXStudio/shared-config/compare/v2.3.0...v2.4.0) (2026-05-22)
+
+
+### Features
+
+* run audit before lint and test ([319b03c](https://github.com/MakerXStudio/shared-config/commit/319b03c81ac6cec1e16aa86438eabf44e8ba26e6))
+* run audit before lint and test ([881e71f](https://github.com/MakerXStudio/shared-config/commit/881e71f53d893298b25bbdd68334df0abeed72c9))
+
 ## [2.3.0](https://github.com/MakerXStudio/shared-config/compare/v2.2.0...v2.3.0) (2026-05-21)
 
 
