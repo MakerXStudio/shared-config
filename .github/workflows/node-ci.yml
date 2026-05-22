@@ -119,6 +119,9 @@ jobs:
       # allow scripts to run without npm auth token
       - run: npm rebuild && npm run prepare --if-present
 
+      - name: Audit
+        run: ${{ inputs.audit-script }}
+
       # run all the CI scripts
       - name: 'Commit lint'
         if: ${{ inputs.run-commit-lint }}
@@ -148,9 +151,6 @@ jobs:
           reporter: jest-junit
           output-to: checks
           fail-on-error: false
-
-      - name: Audit
-        run: ${{ inputs.audit-script }}
 
       - name: Build
         if: ${{ inputs.run-build }}
