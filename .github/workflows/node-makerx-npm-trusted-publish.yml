@@ -17,10 +17,6 @@ on:
         required: false
         type: string
         default: "."
-      registry-url:
-        required: false
-        type: string
-        default: "https://npm.makerx.tech/"
       dist-tag:
         description: Optional dist-tag; required by npm for prerelease versions
         required: false
@@ -54,7 +50,7 @@ jobs:
       # expire between minting and use.
       - name: Publish
         env:
-          REGISTRY_URL: ${{ inputs.registry-url }}
+          REGISTRY_URL: https://npm.makerx.tech/
           DIST_TAG: ${{ inputs.dist-tag }}
         run: |
           set -euo pipefail
@@ -69,7 +65,7 @@ jobs:
           # publishConfig.registry takes precedence over --registry at publish
           # time; fail fast if it points somewhere the minted token cannot reach.
           if [ -n "$PUBLISH_CONFIG_REGISTRY" ] && [ "${PUBLISH_CONFIG_REGISTRY%/}" != "$AUDIENCE" ]; then
-            echo "::error::publishConfig.registry ($PUBLISH_CONFIG_REGISTRY) does not match registry-url ($REGISTRY_URL)"
+            echo "::error::publishConfig.registry ($PUBLISH_CONFIG_REGISTRY) does not match the publish registry ($REGISTRY_URL)"
             exit 1
           fi
 
