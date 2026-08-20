@@ -1,18 +1,4 @@
 # Publishes a pre-built package to npm.makerx.tech using GitHub Actions OIDC.
-#
-# Caller requirements:
-# - Commit the final package.json and package contents; this workflow does not
-#   install dependencies or build the package.
-# - Trigger only on pushes to main. Do not expose workflow_dispatch or inputs
-#   that allow another ref to be selected.
-# - Grant the called job `contents: read` and `id-token: write` permissions.
-# - Ensure the caller's workflow filename is on the registry allow-list.
-#
-# Publishing behavior:
-# - Authentication uses a short-lived OIDC token; no secrets are required.
-# - Published versions are immutable. Publishing an existing version fails.
-#
-# See MakerXStudio/npm-trusted-access docs/publishing.md for registry rules.
 # For publishing to npmjs.com, use node-trusted-publish.yml instead.
 
 on:
