@@ -1,0 +1,208 @@
+name: Zizmor
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
+      scan-paths:
+        description: 'Whitespace-separated files or directories for zizmor to audit. Optional.'
+        type: string
+        required: false
+        default: '.'
+      collect:
+        description: 'Input collection mode: `all`, `default`, `workflows`, `actions` or `dependabot`. Optional.'
+        type: string
+        required: false
+        default: 'default'
+      persona:
+        description: 'Auditing persona: `regular`, `pedantic` or `auditor`. Optional.'
+        type: string
+        required: false
+        default: 'regular'
+      min-severity:
+        description: 'Minimum severity to report: `informational`, `low`, `medium` or `high`. Optional.'
+        type: string
+        required: false
+        default: ''
+      min-confidence:
+        description: 'Minimum confidence to report: `low`, `medium` or `high`. Optional.'
+        type: string
+        required: false
+        default: ''
+      online-audits:
+        description: 'Set to `false` to skip audits that call the GitHub API. Optional.'
+        type: string
+        required: false
+        default: 'true'
+      zizmor-version:
+        description: 'Exact zizmor version, or `latest`. Optional.'
+        type: string
+        required: false
+        default: 'latest'
+      config:
+        description: 'Path to a zizmor configuration file. Optional.'
+        type: string
+        required: false
+        default: ''
+      dry-run:
+        description: 'Set to `true` to report findings without failing the job. Optional. Callers default to failing; this repository scans itself in advisory mode.'
+        type: string
+        required: false
+        default: 'false'
+
+permissions: {}
+
+concurrency:
+  # Namespace this workflow's runs to reduce collisions with caller concurrency groups.
+  group: zizmor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  zizmor:
+    name: Zizmor
+    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
+    permissions:
+      contents: read # checkout, and zizmor's online audits
+      pull-requests: write # the sticky findings comment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Findings are reported before they are enforced, so a pull request gets
+      # the comment even when the scan fails the job.
+      - name: Run zizmor
+        id: zizmor
+        continue-on-error: true
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        with:
+          inputs: ${{ inputs.scan-paths || '.' }}
+          collect: ${{ inputs.collect || 'default' }}
+          persona: ${{ inputs.persona || 'regular' }}
+          min-severity: ${{ inputs.min-severity || '' }}
+          min-confidence: ${{ inputs.min-confidence || '' }}
+          online-audits: ${{ inputs.online-audits || 'true' }}
+          version: ${{ inputs.zizmor-version || 'latest' }}
+          config: ${{ inputs.config || '' }}
+          # Use plain output for the PR report. SARIF upload would also require
+          # security-events: write, which this job deliberately lacks.
+          advanced-security: false
+          annotations: false
+          color: false
+
+      - name: Build report
+        id: report
+        if: always()
+        shell: bash
+        env:
+          ZIZMOR_OUTCOME: ${{ steps.zizmor.outcome }}
+          DRY_RUN: ${{ inputs.dry-run || 'true' }}
+        run: |
+          set -euo pipefail
+
+          # The pinned zizmor-action writes plain output here. Reverify this
+          # implementation detail when updating the action; the fallback below
+          # keeps a future upstream change from breaking report generation.
+          LOG="$RUNNER_TEMP/zizmor"
+          BODY="$RUNNER_TEMP/zizmor-report.md"
+          LIMIT=55000
+
+          {
+            echo "### :rainbow: zizmor workflow scan"
+            echo ""
+            if [ "$ZIZMOR_OUTCOME" = "success" ]; then
+              echo ":white_check_mark: zizmor found nothing to report."
+            else
+              echo ":x: zizmor reported findings."
+              if [ "$DRY_RUN" = "true" ]; then
+                echo ""
+                echo "Advisory mode: the job is not failing on these findings."
+              fi
+            fi
+            if [ -s "$LOG" ]; then
+              echo ""
+              echo '```'
+              head -c "$LIMIT" "$LOG"
+              echo ""
+              if [ "$(wc -c < "$LOG")" -gt "$LIMIT" ]; then
+                echo "... output truncated, see the job log for the rest."
+              fi
+              echo '```'
+            else
+              echo ""
+              echo "No zizmor output was captured. See the job log."
+            fi
+          } > "$BODY"
+
+          # Use a random delimiter to avoid collisions with scan output.
+          DELIMITER="ZIZMOR_EOF_$( (openssl rand -hex 8 2>/dev/null) || printf '%s%s' "$RANDOM" "$RANDOM" )"
+          {
+            echo "markdown<<$DELIMITER"
+            cat "$BODY"
+            echo "$DELIMITER"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const marker = '<!-- zizmor-report -->';
+            const body = `${marker}\n${process.env.ZIZMOR_MARKDOWN}`;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+        env:
+          ZIZMOR_MARKDOWN: ${{ steps.report.outputs.markdown }}
+
+      - name: Enforce zizmor result
+        if: always() && steps.zizmor.outcome != 'success'
+        shell: bash
+        env:
+          DRY_RUN: ${{ inputs.dry-run || 'true' }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "::warning::zizmor reported findings but dry-run is enabled, so the job is not failing."
+            exit 0
+          fi
+          echo "::error::zizmor reported findings. See the job log and the pull request comment."
+          exit 1
