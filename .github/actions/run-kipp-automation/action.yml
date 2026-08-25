@@ -1,0 +1,119 @@
+name: Run Kipp Automation
+description: Execute a Kipp Managed Services automation through the runtime installed by setup-kipp
+
+inputs:
+  automation-id:
+    description: 'ID of the automation or combined pipeline. Must start with a lowercase letter or digit and contain at most 64 lowercase letters, digits and hyphens.'
+    required: true
+  github-token:
+    description: 'Token used for GitHub API calls, Git pushes and `gh` commands. Pass a GitHub App token when the automation writes to the repository. Default: the workflow token.'
+    required: false
+    default: ${{ github.token }}
+  phase:
+    description: 'Execution stage. Use `all` for one invocation, or invoke `work` followed by `publish` in the same job when the GitHub token must be refreshed. Default: `all`.'
+    required: false
+    default: all
+  subject-path:
+    description: 'Path to a separate checkout containing the repository revision the automation will inspect or modify, such as a pull-request head.'
+    required: false
+    default: ''
+  scrub-oidc-env:
+    description: 'Clear the GitHub OIDC request variables before the automation runs and for the remainder of the job. Enable only when no provider or later step needs OIDC. Default: `false`.'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Resolve automation inputs
+      shell: bash
+      env:
+        AUTOMATION_ID: ${{ inputs.automation-id }}
+        PHASE: ${{ inputs.phase }}
+        RUNTIME_PATH: ${{ env.KIPP_RUNTIME_PATH }}
+        AI_PROVIDER: ${{ env.KIPP_AI_PROVIDER }}
+        SUBJECT_PATH: ${{ inputs.subject-path }}
+        SCRUB_OIDC_ENV: ${{ inputs.scrub-oidc-env }}
+      run: |
+        set -euo pipefail
+
+        fail() {
+          echo "::error::$1"
+          exit 1
+        }
+
+        case "$SCRUB_OIDC_ENV" in
+          true | false) ;;
+          *) fail "scrub-oidc-env must be 'true' or 'false', received '$SCRUB_OIDC_ENV'." ;;
+        esac
+
+        # The ID becomes part of runtime-managed paths. Reject unsafe characters.
+        [[ "$AUTOMATION_ID" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || fail "automation-id must be lower case letters, digits and hyphens, received '$AUTOMATION_ID'."
+
+        case "$PHASE" in
+          all | work | publish) ;;
+          *) fail "phase must be 'all', 'work' or 'publish', received '$PHASE'." ;;
+        esac
+
+        [ -n "$RUNTIME_PATH" ] || fail "No Kipp runtime is configured. Run the setup-kipp action before this action."
+        [ -f "$RUNTIME_PATH" ] || fail "No Kipp runtime entry point exists at '$RUNTIME_PATH'."
+
+        case "$AI_PROVIDER" in
+          openai-compatible | azure-foundry) ;;
+          *) fail "No supported Kipp AI provider is configured. Run the setup-kipp action before this action." ;;
+        esac
+
+        [ -d "$GITHUB_WORKSPACE/.kipp/automation" ] || fail "No automation package exists at '.kipp/automation' in the checked out repository."
+
+        if [ -n "$SUBJECT_PATH" ]; then
+          [ -e "$SUBJECT_PATH" ] || fail "subject-path '$SUBJECT_PATH' does not exist."
+        fi
+
+        echo "Running automation '$AUTOMATION_ID' in phase '$PHASE'."
+
+    # GITHUB_ENV applies the empty values to the automation and every later
+    # step in the job. This is opt-in because some providers and downstream
+    # steps legitimately exchange the job's OIDC identity.
+    - name: Scrub OIDC request variables
+      if: inputs.scrub-oidc-env == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        {
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL="
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN="
+        } >> "$GITHUB_ENV"
+
+    - name: Confirm OIDC request variables are scrubbed
+      if: inputs.scrub-oidc-env == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+          echo "::error::The OIDC request variables are still set for the automation step. Refusing to run."
+          exit 1
+        fi
+        echo "OIDC request variables are not visible to the automation step."
+
+    # Use github-script v9 or later because it runs on Node 24. The runtime
+    # imports TypeScript automation modules and relies on Node 24's type stripping.
+    #
+    # Pass workflow values through the environment rather than interpolating
+    # them into JavaScript, where untrusted values could become code.
+    - name: Run automation
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      env:
+        KIPP_AUTOMATION_ID: ${{ inputs.automation-id }}
+        KIPP_PHASE: ${{ inputs.phase }}
+        KIPP_SUBJECT_PATH: ${{ inputs.subject-path }}
+        # github-token configures github-script's Octokit client but does not
+        # expose the token value. The runtime also needs the value for HTTPS Git
+        # pushes and authenticated `gh` commands in the Pi subprocess.
+        KIPP_GITHUB_TOKEN: ${{ inputs.github-token }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const { pathToFileURL } = await import("node:url")
+          const runtime = await import(pathToFileURL(process.env.KIPP_RUNTIME_PATH).href)
+          await runtime.runAutomation({ github, context, core, exec })
