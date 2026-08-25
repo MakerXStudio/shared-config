@@ -1,0 +1,201 @@
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
+      pnpm-version:
+        required: false
+        type: string
+        default: ''
+        description: Version of pnpm to use. If empty, resolved from the packageManager field of <working-directory>/package.json; set it only to override.
+      node-version:
+        required: false
+        type: string
+        default: 24.x
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+      lint-script:
+        required: false
+        type: string
+        default: pnpm run --if-present lint
+      compile-script:
+        required: false
+        type: string
+        default: pnpm run --if-present check-types
+      pre-test-script:
+        required: false
+        type: string
+      test-script:
+        required: false
+        type: string
+        default: pnpm run --if-present test
+      test-environment-variables:
+        required: false
+        type: string
+        default: '{}'
+      output-test-results:
+        required: false
+        type: boolean
+        default: false
+      test-results-file-pattern:
+        required: false
+        type: string
+        default: '**/test-results.xml'
+      audit-script:
+        required: false
+        type: string
+        default: pnpm audit
+      build-script:
+        required: false
+        type: string
+        default: pnpm run build
+      run-build:
+        required: false
+        type: boolean
+        default: false
+      run-commit-lint:
+        required: false
+        type: boolean
+        default: false
+      commit-lint-script:
+        required: false
+        type: string
+        default: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+        description: pnpm exec resolves the locally installed commitlint; callers enabling run-commit-lint must have it as a devDependency
+      pre-run-script:
+        required: false
+        type: string
+      generate-sbom:
+        required: false
+        type: boolean
+        default: false
+      sbom-format:
+        required: false
+        type: string
+        default: spdx
+      sbom-artifact-name:
+        required: false
+        type: string
+        default: sbom
+    secrets:
+      npm-auth-token:
+        description: Registry auth token (don't pass in on a PR build on a public repository)
+        required: false
+
+jobs:
+  # Job id matches node-ci.yml so callers' check contexts ("<caller job> / node-ci")
+  # survive an npm→pnpm swap without required-status-check changes — same pattern
+  # as node-build-zip.yml and node-pnpm-build-zip.yml sharing the build-zip id.
+  node-ci:
+    runs-on: ${{ inputs.runs-on }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      # pnpm must be on PATH before setup-node's cache: pnpm can resolve it
+      - name: Setup pnpm (version)
+        if: ${{ inputs.pnpm-version != '' }}
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        with:
+          version: ${{ inputs.pnpm-version }}
+          standalone: true
+
+      # resolves the packageManager field
+      - name: Setup pnpm (from packageManager)
+        if: ${{ inputs.pnpm-version == '' }}
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        with:
+          package_json_file: ${{ inputs.working-directory }}/package.json
+          standalone: true
+
+      # setup node + private repo access
+      - name: Use Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@makerxstudio'
+          cache: 'pnpm'
+          cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+
+      - name: Pre-run
+        if: ${{ inputs.pre-run-script }}
+        run: ${{ inputs.pre-run-script }}
+
+      # run pnpm install preventing script access to registry auth token
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+      # allows allowlisted dependency build scripts + prepare to run without registry credentials
+      - run: pnpm rebuild && pnpm run --if-present prepare
+
+      - name: Audit
+        run: ${{ inputs.audit-script }}
+
+      # run all the CI scripts
+      - name: 'Commit lint'
+        if: ${{ inputs.run-commit-lint }}
+        run: ${{ inputs.commit-lint-script }}
+
+      - name: Lint
+        run: ${{ inputs.lint-script }}
+
+      - name: Compile
+        run: ${{ inputs.compile-script }}
+
+      - name: Pre-test
+        if: ${{ inputs.pre-test-script }}
+        run: ${{ inputs.pre-test-script }}
+
+      - name: Test
+        run: ${{ inputs.test-script }}
+        env: ${{ fromJson(inputs.test-environment-variables) }}
+
+        #Requires permissions.checks: write
+      - name: Publish test results
+        if: ${{ always() && inputs.output-test-results }}
+        uses: phoenix-actions/test-reporting@7317eea6e13c47348dd0bb318669485157c518d6 # v16
+        with:
+          name: Test results
+          path: ${{ inputs.test-results-file-pattern }}
+          reporter: jest-junit
+          output-to: checks
+          fail-on-error: false
+
+      - name: Build
+        if: ${{ inputs.run-build }}
+        run: ${{ inputs.build-script }}
+        # CDK infrastructure build calls npm ci on /infrastructure/build, which may fail without NODE_AUTH_TOKEN
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm-auth-token || secrets.GITHUB_TOKEN }}
+
+      - name: Validate SBOM format
+        if: ${{ inputs.generate-sbom && inputs.sbom-format != 'spdx' && inputs.sbom-format != 'cyclonedx' }}
+        run: |
+          echo "::error::Invalid sbom-format '${SBOM_FORMAT}'. Must be 'spdx' or 'cyclonedx'."
+          exit 1
+        env:
+          SBOM_FORMAT: ${{ inputs.sbom-format }}
+
+      # syft reads pnpm-lock.yaml + installed node_modules and emits both SPDX and CycloneDX (npm sbom is npm-only)
+      - name: Generate and upload SBOM
+        if: ${{ inputs.generate-sbom }}
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: ${{ inputs.working-directory }}
+          format: ${{ inputs.sbom-format == 'spdx' && 'spdx-json' || 'cyclonedx-json' }}
+          output-file: ${{ inputs.sbom-artifact-name }}.${{ inputs.sbom-format == 'spdx' && 'spdx.json' || 'cdx.json' }}
+          artifact-name: ${{ inputs.sbom-artifact-name }}
+          upload-artifact: true
