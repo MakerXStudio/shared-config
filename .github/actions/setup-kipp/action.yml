@@ -1,0 +1,382 @@
+name: Setup Kipp
+description: Install Kipp Managed Services and configure an isolated Pi environment for repository automation
+
+inputs:
+  kipp-version:
+    description: 'Exact Kipp version or `latest`.'
+    required: true
+  ai-provider:
+    description: 'AI provider to configure: `openai-compatible` or `azure-foundry`.'
+    required: true
+  ai-model:
+    description: 'Model or deployment used for automation work.'
+    required: true
+  ai-summary-model:
+    description: 'Model or deployment used for run summaries. Default: the `ai-model` value.'
+    required: false
+    default: ''
+  ai-api-key:
+    description: 'API key for the provider endpoint. Required for `openai-compatible`.'
+    required: false
+    default: ''
+  ai-base-url:
+    description: 'Base URL of the OpenAI-compatible endpoint. Required for `openai-compatible`.'
+    required: false
+    default: ''
+  azure-client-id:
+    description: 'Microsoft Entra application or managed identity client ID. Required for `azure-foundry`.'
+    required: false
+    default: ''
+  azure-tenant-id:
+    description: 'Microsoft Entra tenant ID. Required for `azure-foundry`.'
+    required: false
+    default: ''
+  azure-subscription-id:
+    description: 'Azure subscription ID. Required for `azure-foundry`.'
+    required: false
+    default: ''
+  azure-foundry-endpoint:
+    description: 'Azure AI Foundry endpoint used to invoke the configured deployments. Required for `azure-foundry`.'
+    required: false
+    default: ''
+  node-version:
+    description: 'Node.js version used by Pi and automation commands. Default: `24.x`.'
+    required: false
+    default: 24.x
+
+outputs:
+  kipp-version:
+    description: 'Exact version of the installed Kipp package.'
+    value: ${{ steps.download.outputs.kipp-version }}
+  package-path:
+    description: 'Absolute path to the installed Kipp package root.'
+    value: ${{ steps.download.outputs.package-path }}
+  runtime-path:
+    description: 'Absolute path to the Kipp automation runtime entry point.'
+    value: ${{ steps.runtime.outputs.runtime-path }}
+  pi-version:
+    description: 'Exact version of the installed Pi package.'
+    value: ${{ steps.runtime.outputs.pi-version }}
+  agent-dir:
+    description: 'Absolute path to the isolated Pi agent directory.'
+    value: ${{ steps.pi-env.outputs.agent-dir }}
+  session-dir:
+    description: 'Absolute path to the directory containing Pi session transcripts.'
+    value: ${{ steps.pi-env.outputs.session-dir }}
+
+runs:
+  using: "composite"
+
+  steps:
+    # Validate configuration before performing any installs.
+    - name: Validate inputs
+      id: validate
+      shell: bash
+      env:
+        KIPP_VERSION: ${{ inputs.kipp-version }}
+        AI_PROVIDER: ${{ inputs.ai-provider }}
+        AI_MODEL: ${{ inputs.ai-model }}
+        AI_SUMMARY_MODEL: ${{ inputs.ai-summary-model }}
+        AI_API_KEY: ${{ inputs.ai-api-key }}
+        AI_BASE_URL: ${{ inputs.ai-base-url }}
+        AZURE_CLIENT_ID: ${{ inputs.azure-client-id }}
+        AZURE_TENANT_ID: ${{ inputs.azure-tenant-id }}
+        AZURE_SUBSCRIPTION_ID: ${{ inputs.azure-subscription-id }}
+        AZURE_FOUNDRY_ENDPOINT: ${{ inputs.azure-foundry-endpoint }}
+        NODE_VERSION: ${{ inputs.node-version }}
+      run: |
+        set -euo pipefail
+
+        # Reject line-breaking input before emitting any workflow command or
+        # diagnostic containing caller-controlled data.
+        reject_line_breaks() {
+          case "$2" in
+            *$'\r'*|*$'\n'*)
+              printf '::error::%s must not contain a carriage return or newline.\n' "$1"
+              exit 1
+              ;;
+          esac
+        }
+
+        reject_line_breaks "kipp-version" "$KIPP_VERSION"
+        reject_line_breaks "ai-provider" "$AI_PROVIDER"
+        reject_line_breaks "ai-model" "$AI_MODEL"
+        reject_line_breaks "ai-summary-model" "$AI_SUMMARY_MODEL"
+        reject_line_breaks "ai-api-key" "$AI_API_KEY"
+        reject_line_breaks "ai-base-url" "$AI_BASE_URL"
+        reject_line_breaks "azure-client-id" "$AZURE_CLIENT_ID"
+        reject_line_breaks "azure-tenant-id" "$AZURE_TENANT_ID"
+        reject_line_breaks "azure-subscription-id" "$AZURE_SUBSCRIPTION_ID"
+        reject_line_breaks "azure-foundry-endpoint" "$AZURE_FOUNDRY_ENDPOINT"
+        reject_line_breaks "node-version" "$NODE_VERSION"
+
+        # Explicitly mask the key in case the caller passed a literal value instead of a GitHub secret.
+        if [ -n "$AI_API_KEY" ]; then
+          # Workflow commands percent-decode their payload, so escape percent
+          # signs to preserve the key's literal value when registering the mask.
+          MASK_VALUE="${AI_API_KEY//'%'/'%25'}"
+          printf '::add-mask::%s\n' "$MASK_VALUE"
+          unset MASK_VALUE
+        fi
+
+        EXACT_VERSION='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+        GUID='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        HTTPS_URL='^https://[A-Za-z0-9._-]+(:[0-9]+)?(/[^[:space:]]*)?$'
+
+        fail() {
+          echo "::error::$1"
+          exit 1
+        }
+
+        require() {
+          [ -n "$2" ] || fail "$1 is required when ai-provider is '$AI_PROVIDER'."
+        }
+
+        case "$AI_PROVIDER" in
+          openai-compatible | azure-foundry) ;;
+          *) fail "Unsupported ai-provider '$AI_PROVIDER'. Supported providers are: openai-compatible, azure-foundry." ;;
+        esac
+
+        # Normal workflows pin an exact version. The self-maintenance workflows use `latest` to discover and propose version updates.
+        if [ "$KIPP_VERSION" != "latest" ]; then
+          [[ "$KIPP_VERSION" =~ $EXACT_VERSION ]] || fail "kipp-version must be an exact version such as 1.2.3, or the literal 'latest', received '$KIPP_VERSION'."
+        fi
+        [ -n "$AI_MODEL" ] || fail "ai-model is required."
+
+        case "$AI_PROVIDER" in
+          openai-compatible)
+            require "ai-api-key" "$AI_API_KEY"
+            require "ai-base-url" "$AI_BASE_URL"
+            [[ "$AI_BASE_URL" =~ $HTTPS_URL ]] || fail "ai-base-url must be an https URL, received '$AI_BASE_URL'."
+            ;;
+          azure-foundry)
+            require "azure-client-id" "$AZURE_CLIENT_ID"
+            require "azure-tenant-id" "$AZURE_TENANT_ID"
+            require "azure-subscription-id" "$AZURE_SUBSCRIPTION_ID"
+            require "azure-foundry-endpoint" "$AZURE_FOUNDRY_ENDPOINT"
+            for pair in "azure-client-id=$AZURE_CLIENT_ID" "azure-tenant-id=$AZURE_TENANT_ID" "azure-subscription-id=$AZURE_SUBSCRIPTION_ID"; do
+              name="${pair%%=*}"
+              value="${pair#*=}"
+              [[ "$value" =~ $GUID ]] || fail "$name must be a GUID, received '$value'."
+            done
+            [[ "$AZURE_FOUNDRY_ENDPOINT" =~ $HTTPS_URL ]] || fail "azure-foundry-endpoint must be an https URL, received '$AZURE_FOUNDRY_ENDPOINT'."
+            ;;
+        esac
+
+        SUMMARY_MODEL="$AI_SUMMARY_MODEL"
+        [ -n "$SUMMARY_MODEL" ] || SUMMARY_MODEL="$AI_MODEL"
+
+        echo "summary-model=$SUMMARY_MODEL" >> "$GITHUB_OUTPUT"
+        echo "Provider '$AI_PROVIDER' selected with model '$AI_MODEL' and summary model '$SUMMARY_MODEL'."
+
+    - name: Use Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        package-manager-cache: false # There is no project lockfile to use as a cache key.
+
+    - name: Create isolated Pi environment
+      id: pi-env
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        AGENT_DIR="$RUNNER_TEMP/kipp-pi-agent"
+        SESSION_DIR="$RUNNER_TEMP/kipp-pi-sessions"
+
+        mkdir -p "$AGENT_DIR" "$SESSION_DIR"
+        chmod 700 "$AGENT_DIR" "$SESSION_DIR"
+
+        # Give this job its own Pi directory so credentials or settings already
+        # on the runner cannot change its provider configuration. Offline mode
+        # also disables Pi's automatic version check.
+        {
+          echo "PI_CODING_AGENT_DIR=$AGENT_DIR"
+          echo "PI_OFFLINE=1"
+          echo "PI_TELEMETRY=0"
+          echo "KIPP_SESSION_DIR=$SESSION_DIR"
+        } >> "$GITHUB_ENV"
+
+        {
+          echo "agent-dir=$AGENT_DIR"
+          echo "session-dir=$SESSION_DIR"
+        } >> "$GITHUB_OUTPUT"
+
+    # Export only non-secret provider settings.
+    # The API key is passed directly to the steps that need it and is never written to GITHUB_ENV.
+    - name: Export provider configuration
+      shell: bash
+      env:
+        AI_PROVIDER: ${{ inputs.ai-provider }}
+        AI_MODEL: ${{ inputs.ai-model }}
+        AI_SUMMARY_MODEL: ${{ steps.validate.outputs.summary-model }}
+        AI_BASE_URL: ${{ inputs.ai-base-url }}
+        AZURE_CLIENT_ID: ${{ inputs.azure-client-id }}
+        AZURE_TENANT_ID: ${{ inputs.azure-tenant-id }}
+        AZURE_SUBSCRIPTION_ID: ${{ inputs.azure-subscription-id }}
+        AZURE_FOUNDRY_ENDPOINT: ${{ inputs.azure-foundry-endpoint }}
+      run: |
+        set -euo pipefail
+
+        {
+          echo "KIPP_AI_PROVIDER=$AI_PROVIDER"
+          echo "KIPP_AI_MODEL=$AI_MODEL"
+          echo "KIPP_AI_SUMMARY_MODEL=$AI_SUMMARY_MODEL"
+        } >> "$GITHUB_ENV"
+
+        [ -z "$AI_BASE_URL" ] || echo "KIPP_AI_BASE_URL=$AI_BASE_URL" >> "$GITHUB_ENV"
+        [ -z "$AZURE_CLIENT_ID" ] || echo "KIPP_AZURE_CLIENT_ID=$AZURE_CLIENT_ID" >> "$GITHUB_ENV"
+        [ -z "$AZURE_TENANT_ID" ] || echo "KIPP_AZURE_TENANT_ID=$AZURE_TENANT_ID" >> "$GITHUB_ENV"
+        [ -z "$AZURE_SUBSCRIPTION_ID" ] || echo "KIPP_AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID" >> "$GITHUB_ENV"
+        [ -z "$AZURE_FOUNDRY_ENDPOINT" ] || echo "KIPP_AZURE_FOUNDRY_ENDPOINT=$AZURE_FOUNDRY_ENDPOINT" >> "$GITHUB_ENV"
+
+    - name: Download Kipp
+      id: download
+      shell: bash
+      env:
+        REGISTRY_URL: https://npm.makerx.tech/
+        PACKAGE_SCOPE: '@makerx-trusted-access'
+        PACKAGE_NAME: '@makerx-trusted-access/kipp'
+        KIPP_VERSION: ${{ inputs.kipp-version }}
+      run: | # zizmor: ignore[adhoc-packages]
+        set -euo pipefail
+
+        NPMRC="$RUNNER_TEMP/kipp-trusted-access.npmrc"
+        # Delete the temporary npm credentials whether the step succeeds or fails.
+        trap 'rm -f "$NPMRC"' EXIT
+
+        if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+          echo "::error::No OIDC token endpoint is available. Grant the job 'id-token: write' permission."
+          exit 1
+        fi
+
+        AUDIENCE="${REGISTRY_URL%/}"
+        HOST="${AUDIENCE#https://}"
+        INSTALL_ROOT="$RUNNER_TEMP/kipp-package"
+
+        # Install under a separate private package so npm does not use the
+        # checked-out repository's package metadata or lockfile.
+        mkdir -p "$INSTALL_ROOT"
+        printf '{ "name": "kipp-managed-services-install", "version": "0.0.0", "private": true }\n' > "$INSTALL_ROOT/package.json"
+
+        if ! TOKEN_RESPONSE=$(curl -sS --fail --max-time 30 \
+          -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE"); then
+          echo "::error::Failed to request an OIDC token for $AUDIENCE."
+          exit 1
+        fi
+
+        TOKEN=$(printf '%s' "$TOKEN_RESPONSE" | jq -r '.value // empty')
+        unset TOKEN_RESPONSE
+        if [ -z "$TOKEN" ]; then
+          echo "::error::The OIDC token response for $AUDIENCE contained no token."
+          exit 1
+        fi
+        echo "::add-mask::$TOKEN"
+
+        ( umask 077 && printf '%s:registry=%s\n//%s/:_authToken=%s\n' \
+          "$PACKAGE_SCOPE" "$REGISTRY_URL" "$HOST" "$TOKEN" > "$NPMRC" )
+        export NPM_CONFIG_USERCONFIG="$NPMRC"
+
+        # If `latest` was requested, resolve it to an exact version before installing.
+        INSTALL_VERSION="$KIPP_VERSION"
+        if [ "$INSTALL_VERSION" = "latest" ]; then
+          INSTALL_VERSION=$(npm view "$PACKAGE_NAME" version --registry "$REGISTRY_URL") || INSTALL_VERSION=""
+          if [[ ! "$INSTALL_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Could not resolve $PACKAGE_NAME@latest to an exact version from $REGISTRY_URL."
+            exit 1
+          fi
+          echo "::notice::Resolved $PACKAGE_NAME@latest to $INSTALL_VERSION"
+        fi
+
+        npm install --prefix "$INSTALL_ROOT" --no-save --ignore-scripts --no-audit --no-fund "$PACKAGE_NAME@$INSTALL_VERSION"
+
+        rm -f "$NPMRC"
+        unset NPM_CONFIG_USERCONFIG
+
+        PACKAGE_PATH="$INSTALL_ROOT/node_modules/$PACKAGE_NAME"
+        if [ ! -f "$PACKAGE_PATH/package.json" ]; then
+          echo "::error::$PACKAGE_NAME@$INSTALL_VERSION did not install to $PACKAGE_PATH."
+          exit 1
+        fi
+
+        RESOLVED_VERSION=$(MANIFEST_PATH="$PACKAGE_PATH/package.json" node -e 'process.stdout.write(String(require(process.env.MANIFEST_PATH).version))')
+
+        {
+          echo "package-path=$PACKAGE_PATH"
+          echo "kipp-version=$RESOLVED_VERSION"
+        } >> "$GITHUB_OUTPUT"
+
+        echo "::notice::Installed $PACKAGE_NAME@$RESOLVED_VERSION from $REGISTRY_URL"
+
+    - name: Resolve Kipp runtime
+      id: runtime
+      shell: bash
+      env:
+        PACKAGE_PATH: ${{ steps.download.outputs.package-path }}
+      run: |
+        set -euo pipefail
+
+        MANIFEST="$PACKAGE_PATH/package.json"
+
+        read_field() {
+          FIELD="$1" MANIFEST_PATH="$MANIFEST" node -e '
+            const manifest = require(process.env.MANIFEST_PATH);
+            const value = (manifest.kipp || {})[process.env.FIELD];
+            process.stdout.write(typeof value === "string" ? value : "");
+          '
+        }
+
+        PI_VERSION="$(read_field supportedPiVersion)"
+        RUNTIME_RELATIVE="$(read_field runtime)"
+
+        if [ -z "$PI_VERSION" ]; then
+          echo "::error::The installed Kipp package does not declare 'kipp.supportedPiVersion'. Upgrade kipp-version to a release that ships the Managed Services manifest."
+          exit 1
+        fi
+
+        if [[ ! "$PI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          echo "::error::The resolved Pi version '$PI_VERSION' is not an exact version."
+          exit 1
+        fi
+
+        if [ -z "$RUNTIME_RELATIVE" ]; then
+          echo "::error::The installed Kipp package does not declare 'kipp.runtime'. Upgrade kipp-version to a release that ships the Managed Services automation runtime."
+          exit 1
+        fi
+
+        RUNTIME_PATH="$PACKAGE_PATH/$RUNTIME_RELATIVE"
+        if [ ! -f "$RUNTIME_PATH" ]; then
+          echo "::error::The Kipp package declares 'kipp.runtime' as '$RUNTIME_RELATIVE' but no file exists at $RUNTIME_PATH."
+          exit 1
+        fi
+
+        {
+          echo "pi-version=$PI_VERSION"
+          echo "runtime-path=$RUNTIME_PATH"
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          echo "KIPP_PACKAGE_PATH=$PACKAGE_PATH"
+          echo "KIPP_RUNTIME_PATH=$RUNTIME_PATH"
+        } >> "$GITHUB_ENV"
+
+        echo "Resolved Pi $PI_VERSION and runtime entry point $RUNTIME_PATH."
+
+    - name: Install Pi
+      shell: bash
+      env:
+        PI_VERSION: ${{ steps.runtime.outputs.pi-version }}
+      run: | # zizmor: ignore[adhoc-packages]
+        set -euo pipefail
+        # PI_VERSION was validated as an exact version.
+        npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@$PI_VERSION"
+        pi --version
+
+    - name: Install Kipp into Pi
+      shell: bash
+      env:
+        PACKAGE_PATH: ${{ steps.download.outputs.package-path }}
+      run: |
+        set -euo pipefail
+        pi install "$PACKAGE_PATH"
