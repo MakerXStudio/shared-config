@@ -9,10 +9,10 @@ inputs:
     description: 'Token used for GitHub API calls, Git pushes and `gh` commands. Pass a GitHub App token when the automation writes to the repository. Default: the workflow token.'
     required: false
     default: ${{ github.token }}
-  phase:
-    description: 'Execution stage. Use `all` for one invocation, or invoke `work` followed by `publish` in the same job when the GitHub token must be refreshed. Default: `all`.'
+  stage:
+    description: 'The stage this step runs when the automation is split across two steps: `work` on one, `publish` on a later one. Leave unset when a single step runs the whole automation. Split the stages when the run may outlive the hour an installation token is good for, and/or to keep the write-scoped token out of the step that calls a model.'
     required: false
-    default: all
+    default: ''
   subject-path:
     description: 'Path to a separate checkout containing the repository revision the automation will inspect or modify, such as a pull-request head.'
     required: false
@@ -22,6 +22,11 @@ inputs:
     required: false
     default: 'false'
 
+outputs:
+  record-digest:
+    description: 'SHA-256 of the run record the work stage wrote to $RUNNER_TEMP/kipp-run-<automation-id>.json. In a two-step process, it must be passed to the publish step as KIPP_RUN_RECORD_DIGEST to satisfy the security control.'
+    value: ${{ steps.run-automation.outputs.record-digest }}
+
 runs:
   using: "composite"
 
@@ -30,7 +35,7 @@ runs:
       shell: bash
       env:
         AUTOMATION_ID: ${{ inputs.automation-id }}
-        PHASE: ${{ inputs.phase }}
+        STAGE: ${{ inputs.stage }}
         RUNTIME_PATH: ${{ env.KIPP_RUNTIME_PATH }}
         AI_PROVIDER: ${{ env.KIPP_AI_PROVIDER }}
         SUBJECT_PATH: ${{ inputs.subject-path }}
@@ -51,9 +56,9 @@ runs:
         # The ID becomes part of runtime-managed paths. Reject unsafe characters.
         [[ "$AUTOMATION_ID" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || fail "automation-id must be lower case letters, digits and hyphens, received '$AUTOMATION_ID'."
 
-        case "$PHASE" in
-          all | work | publish) ;;
-          *) fail "phase must be 'all', 'work' or 'publish', received '$PHASE'." ;;
+        case "$STAGE" in
+          "" | work | publish) ;;
+          *) fail "stage must be 'work' or 'publish' when set, received '$STAGE'." ;;
         esac
 
         [ -n "$RUNTIME_PATH" ] || fail "No Kipp runtime is configured. Run the setup-kipp action before this action."
@@ -70,7 +75,11 @@ runs:
           [ -e "$SUBJECT_PATH" ] || fail "subject-path '$SUBJECT_PATH' does not exist."
         fi
 
-        echo "Running automation '$AUTOMATION_ID' in phase '$PHASE'."
+        if [ -n "$STAGE" ]; then
+          echo "Running the '$STAGE' stage of automation '$AUTOMATION_ID'."
+        else
+          echo "Running automation '$AUTOMATION_ID' in a single step."
+        fi
 
     # GITHUB_ENV applies the empty values to the automation and every later
     # step in the job. This is opt-in because some providers and downstream
@@ -102,10 +111,11 @@ runs:
     # Pass workflow values through the environment rather than interpolating
     # them into JavaScript, where untrusted values could become code.
     - name: Run automation
+      id: run-automation
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       env:
         KIPP_AUTOMATION_ID: ${{ inputs.automation-id }}
-        KIPP_PHASE: ${{ inputs.phase }}
+        KIPP_STAGE: ${{ inputs.stage }}
         KIPP_SUBJECT_PATH: ${{ inputs.subject-path }}
         # github-token configures github-script's Octokit client but does not
         # expose the token value. The runtime also needs the value for HTTPS Git

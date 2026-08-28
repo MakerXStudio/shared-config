@@ -11,10 +11,6 @@ inputs:
   ai-model:
     description: 'Model or deployment used for automation work.'
     required: true
-  ai-summary-model:
-    description: 'Model or deployment used for run summaries. Default: the `ai-model` value.'
-    required: false
-    default: ''
   ai-api-key:
     description: 'API key for the provider endpoint. Required for `openai-compatible`.'
     required: false
@@ -76,7 +72,6 @@ runs:
         KIPP_VERSION: ${{ inputs.kipp-version }}
         AI_PROVIDER: ${{ inputs.ai-provider }}
         AI_MODEL: ${{ inputs.ai-model }}
-        AI_SUMMARY_MODEL: ${{ inputs.ai-summary-model }}
         AI_API_KEY: ${{ inputs.ai-api-key }}
         AI_BASE_URL: ${{ inputs.ai-base-url }}
         AZURE_CLIENT_ID: ${{ inputs.azure-client-id }}
@@ -101,7 +96,6 @@ runs:
         reject_line_breaks "kipp-version" "$KIPP_VERSION"
         reject_line_breaks "ai-provider" "$AI_PROVIDER"
         reject_line_breaks "ai-model" "$AI_MODEL"
-        reject_line_breaks "ai-summary-model" "$AI_SUMMARY_MODEL"
         reject_line_breaks "ai-api-key" "$AI_API_KEY"
         reject_line_breaks "ai-base-url" "$AI_BASE_URL"
         reject_line_breaks "azure-client-id" "$AZURE_CLIENT_ID"
@@ -163,11 +157,7 @@ runs:
             ;;
         esac
 
-        SUMMARY_MODEL="$AI_SUMMARY_MODEL"
-        [ -n "$SUMMARY_MODEL" ] || SUMMARY_MODEL="$AI_MODEL"
-
-        echo "summary-model=$SUMMARY_MODEL" >> "$GITHUB_OUTPUT"
-        echo "Provider '$AI_PROVIDER' selected with model '$AI_MODEL' and summary model '$SUMMARY_MODEL'."
+        echo "Provider '$AI_PROVIDER' selected with model '$AI_MODEL'."
 
     - name: Use Node.js ${{ inputs.node-version }}
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -209,7 +199,6 @@ runs:
       env:
         AI_PROVIDER: ${{ inputs.ai-provider }}
         AI_MODEL: ${{ inputs.ai-model }}
-        AI_SUMMARY_MODEL: ${{ steps.validate.outputs.summary-model }}
         AI_BASE_URL: ${{ inputs.ai-base-url }}
         AZURE_CLIENT_ID: ${{ inputs.azure-client-id }}
         AZURE_TENANT_ID: ${{ inputs.azure-tenant-id }}
@@ -221,7 +210,6 @@ runs:
         {
           echo "KIPP_AI_PROVIDER=$AI_PROVIDER"
           echo "KIPP_AI_MODEL=$AI_MODEL"
-          echo "KIPP_AI_SUMMARY_MODEL=$AI_SUMMARY_MODEL"
         } >> "$GITHUB_ENV"
 
         [ -z "$AI_BASE_URL" ] || echo "KIPP_AI_BASE_URL=$AI_BASE_URL" >> "$GITHUB_ENV"
