@@ -10,7 +10,7 @@ inputs:
     required: false
     default: ${{ github.token }}
   stage:
-    description: 'The stage this step runs when the automation is split across two steps: `work` on one, `publish` on a later one. Leave unset when a single step runs the whole automation. Split the stages when the run may outlive the hour an installation token is good for, and to keep the write-scoped token out of the step that calls a model.'
+    description: 'The stage this step runs when the automation is split across two steps: `work` on one, `publish` on a later one. Leave unset when a single step runs the whole automation. Split the stages when the run may outlive the hour an installation token is good for, and/or to keep the write-scoped token out of the step that calls a model.'
     required: false
     default: ''
   subject-path:
