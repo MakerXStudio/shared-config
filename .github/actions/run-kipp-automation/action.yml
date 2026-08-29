@@ -18,7 +18,7 @@ inputs:
     required: false
     default: ''
   scrub-oidc-env:
-    description: 'Clear the GitHub OIDC request variables before the automation runs and for the remainder of the job. Enable only when no provider or later step needs OIDC. Default: `false`.'
+    description: 'Remove GitHub OIDC request variables from the automation process and clear them for later expression evaluation. Later steps may still receive fresh values when the job grants `id-token: write`. Enable only when the automation does not need OIDC. Default: `false`.'
     required: false
     default: 'false'
 
@@ -81,9 +81,9 @@ runs:
           echo "Running automation '$AUTOMATION_ID' in a single step."
         fi
 
-    # GITHUB_ENV applies the empty values to the automation and every later
-    # step in the job. This is opt-in because some providers and downstream
-    # steps legitimately exchange the job's OIDC identity.
+    # Clearing these values through GITHUB_ENV affects later workflow expressions. When the job
+    # grants `id-token: write`, the runner still injects fresh values into each step process, so the
+    # automation process removes them again below.
     - name: Scrub OIDC request variables
       if: inputs.scrub-oidc-env == 'true'
       shell: bash
@@ -93,17 +93,6 @@ runs:
           echo "ACTIONS_ID_TOKEN_REQUEST_URL="
           echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN="
         } >> "$GITHUB_ENV"
-
-    - name: Confirm OIDC request variables are scrubbed
-      if: inputs.scrub-oidc-env == 'true'
-      shell: bash
-      run: |
-        set -euo pipefail
-        if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
-          echo "::error::The OIDC request variables are still set for the automation step. Refusing to run."
-          exit 1
-        fi
-        echo "OIDC request variables are not visible to the automation step."
 
     # Use github-script v9 or later because it runs on Node 24. The runtime
     # imports TypeScript automation modules and relies on Node 24's type stripping.
@@ -117,6 +106,7 @@ runs:
         KIPP_AUTOMATION_ID: ${{ inputs.automation-id }}
         KIPP_STAGE: ${{ inputs.stage }}
         KIPP_SUBJECT_PATH: ${{ inputs.subject-path }}
+        KIPP_SCRUB_OIDC_ENV: ${{ inputs.scrub-oidc-env }}
         # github-token configures github-script's Octokit client but does not
         # expose the token value. The runtime also needs the value for HTTPS Git
         # pushes and authenticated `gh` commands in the Pi subprocess.
@@ -124,6 +114,17 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
+          // Scrub before importing: the runtime reads this process environment, and the Pi
+          // subprocess inherits it.
+          const OIDC_REQUEST_VARIABLES = ["ACTIONS_ID_TOKEN_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+          if (process.env.KIPP_SCRUB_OIDC_ENV === "true") {
+            for (const name of OIDC_REQUEST_VARIABLES) delete process.env[name]
+            const remaining = OIDC_REQUEST_VARIABLES.filter((name) => process.env[name] !== undefined)
+            if (remaining.length > 0) {
+              throw new Error("The OIDC request variables are still set for the automation step. Refusing to run.")
+            }
+            core.info("OIDC request variables are not visible to the automation step.")
+          }
           const { pathToFileURL } = await import("node:url")
           const runtime = await import(pathToFileURL(process.env.KIPP_RUNTIME_PATH).href)
           await runtime.runAutomation({ github, context, core, exec })

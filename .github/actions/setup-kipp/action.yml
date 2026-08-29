@@ -3,8 +3,12 @@ description: Install Kipp Managed Services and configure an isolated Pi environm
 
 inputs:
   kipp-version:
-    description: 'Exact Kipp version or `latest`.'
+    description: 'Exact Kipp version or `latest`. Ignored when `package-path` is set.'
     required: true
+  package-path:
+    description: 'Path to a local Kipp package, absolute or relative to `GITHUB_WORKSPACE`. When set, the action skips downloading Kipp from the registry and ignores `kipp-version`.'
+    required: false
+    default: ''
   ai-provider:
     description: 'AI provider to configure: `openai-compatible` or `azure-foundry`.'
     required: true
@@ -42,10 +46,10 @@ inputs:
 
 outputs:
   kipp-version:
-    description: 'Exact version of the installed Kipp package.'
+    description: 'Exact version read from the selected Kipp package.'
     value: ${{ steps.download.outputs.kipp-version }}
   package-path:
-    description: 'Absolute path to the installed Kipp package root.'
+    description: 'Absolute path to the selected Kipp package root.'
     value: ${{ steps.download.outputs.package-path }}
   runtime-path:
     description: 'Absolute path to the Kipp automation runtime entry point.'
@@ -64,12 +68,12 @@ runs:
   using: "composite"
 
   steps:
-    # Validate configuration before performing any installs.
     - name: Validate inputs
       id: validate
       shell: bash
       env:
         KIPP_VERSION: ${{ inputs.kipp-version }}
+        PACKAGE_PATH_INPUT: ${{ inputs.package-path }}
         AI_PROVIDER: ${{ inputs.ai-provider }}
         AI_MODEL: ${{ inputs.ai-model }}
         AI_API_KEY: ${{ inputs.ai-api-key }}
@@ -94,6 +98,7 @@ runs:
         }
 
         reject_line_breaks "kipp-version" "$KIPP_VERSION"
+        reject_line_breaks "package-path" "$PACKAGE_PATH_INPUT"
         reject_line_breaks "ai-provider" "$AI_PROVIDER"
         reject_line_breaks "ai-model" "$AI_MODEL"
         reject_line_breaks "ai-api-key" "$AI_API_KEY"
@@ -131,8 +136,19 @@ runs:
           *) fail "Unsupported ai-provider '$AI_PROVIDER'. Supported providers are: openai-compatible, azure-foundry." ;;
         esac
 
-        # Normal workflows pin an exact version. The self-maintenance workflows use `latest` to discover and propose version updates.
-        if [ "$KIPP_VERSION" != "latest" ]; then
+        PACKAGE_PATH=''
+        if [ -n "$PACKAGE_PATH_INPUT" ]; then
+          case "$PACKAGE_PATH_INPUT" in
+            /*) PACKAGE_PATH="$PACKAGE_PATH_INPUT" ;;
+            *) PACKAGE_PATH="$GITHUB_WORKSPACE/$PACKAGE_PATH_INPUT" ;;
+          esac
+          [ -d "$PACKAGE_PATH" ] || fail "package-path '$PACKAGE_PATH_INPUT' is not a directory at $PACKAGE_PATH."
+          [ -f "$PACKAGE_PATH/package.json" ] || fail "package-path '$PACKAGE_PATH_INPUT' has no package.json at $PACKAGE_PATH/package.json."
+        fi
+
+        # Registry installs accept an exact version or `latest`. A local package supplies its own
+        # version through package.json, so kipp-version is ignored when package-path is set.
+        if [ -z "$PACKAGE_PATH" ] && [ "$KIPP_VERSION" != "latest" ]; then
           [[ "$KIPP_VERSION" =~ $EXACT_VERSION ]] || fail "kipp-version must be an exact version such as 1.2.3, or the literal 'latest', received '$KIPP_VERSION'."
         fi
         [ -n "$AI_MODEL" ] || fail "ai-model is required."
@@ -156,6 +172,8 @@ runs:
             [[ "$AZURE_FOUNDRY_ENDPOINT" =~ $HTTPS_URL ]] || fail "azure-foundry-endpoint must be an https URL, received '$AZURE_FOUNDRY_ENDPOINT'."
             ;;
         esac
+
+        echo "package-path=$PACKAGE_PATH" >> "$GITHUB_OUTPUT"
 
         echo "Provider '$AI_PROVIDER' selected with model '$AI_MODEL'."
 
@@ -226,11 +244,50 @@ runs:
         PACKAGE_SCOPE: '@makerx-trusted-access'
         PACKAGE_NAME: '@makerx-trusted-access/kipp'
         KIPP_VERSION: ${{ inputs.kipp-version }}
+        PACKAGE_PATH_OVERRIDE: ${{ steps.validate.outputs.package-path }}
       run: | # zizmor: ignore[adhoc-packages]
         set -euo pipefail
 
+        if [ -n "$PACKAGE_PATH_OVERRIDE" ]; then
+          LOCAL_MANIFEST="$PACKAGE_PATH_OVERRIDE/package.json"
+          EXACT_VERSION='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+
+          fail_manifest() {
+            echo "::error::The local Kipp package at $PACKAGE_PATH_OVERRIDE $1."
+            exit 1
+          }
+
+          # Normalize invalid field types so validation below reports consistent errors.
+          read_manifest_field() {
+            FIELD="$1" MANIFEST_PATH="$LOCAL_MANIFEST" node -e '
+              const manifest = require(process.env.MANIFEST_PATH);
+              const value = manifest[process.env.FIELD];
+              process.stdout.write(typeof value === "string" ? value : "");
+            '
+          }
+
+          LOCAL_NAME="$(read_manifest_field name)"
+          LOCAL_VERSION="$(read_manifest_field version)"
+
+          # Validate caller-controlled metadata before writing it to $GITHUB_OUTPUT or including it
+          # in a workflow command. The exact-version check also rejects line breaks.
+          [ -n "$LOCAL_NAME" ] || fail_manifest "declares no package name"
+          case "$LOCAL_NAME" in
+            *$'\r'*|*$'\n'*) fail_manifest "declares a package name containing a carriage return or newline" ;;
+          esac
+          [[ "$LOCAL_VERSION" =~ $EXACT_VERSION ]] ||
+            fail_manifest "must declare an exact version such as 1.2.3, received '$LOCAL_VERSION'"
+
+          {
+            echo "package-path=$PACKAGE_PATH_OVERRIDE"
+            echo "kipp-version=$LOCAL_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "::notice::Using the local Kipp package $LOCAL_NAME@$LOCAL_VERSION at $PACKAGE_PATH_OVERRIDE. Nothing was installed from $REGISTRY_URL."
+          exit 0
+        fi
+
         NPMRC="$RUNNER_TEMP/kipp-trusted-access.npmrc"
-        # Delete the temporary npm credentials whether the step succeeds or fails.
         trap 'rm -f "$NPMRC"' EXIT
 
         if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
@@ -266,7 +323,6 @@ runs:
           "$PACKAGE_SCOPE" "$REGISTRY_URL" "$HOST" "$TOKEN" > "$NPMRC" )
         export NPM_CONFIG_USERCONFIG="$NPMRC"
 
-        # If `latest` was requested, resolve it to an exact version before installing.
         INSTALL_VERSION="$KIPP_VERSION"
         if [ "$INSTALL_VERSION" = "latest" ]; then
           INSTALL_VERSION=$(npm view "$PACKAGE_NAME" version --registry "$REGISTRY_URL") || INSTALL_VERSION=""
