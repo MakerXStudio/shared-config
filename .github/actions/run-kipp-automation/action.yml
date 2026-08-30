@@ -18,7 +18,7 @@ inputs:
     required: false
     default: ''
   scrub-oidc-env:
-    description: 'Remove GitHub OIDC request variables from the automation process and clear them for later expression evaluation. Later steps may still receive fresh values when the job grants `id-token: write`. Enable only when the automation does not need OIDC. Default: `false`.'
+    description: 'Remove the GitHub OIDC request variables from the automation process, so no model-directed tool call can mint an OIDC token. Scoped to this step: a later step in the same job is unaffected, and the runner still injects fresh values into each step process when the job grants `id-token: write`. Enable only when the automation does not need OIDC. Default: `false`.'
     required: false
     default: 'false'
 
@@ -81,19 +81,6 @@ runs:
           echo "Running automation '$AUTOMATION_ID' in a single step."
         fi
 
-    # Clearing these values through GITHUB_ENV affects later workflow expressions. When the job
-    # grants `id-token: write`, the runner still injects fresh values into each step process, so the
-    # automation process removes them again below.
-    - name: Scrub OIDC request variables
-      if: inputs.scrub-oidc-env == 'true'
-      shell: bash
-      run: |
-        set -euo pipefail
-        {
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL="
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN="
-        } >> "$GITHUB_ENV"
-
     # Use github-script v9 or later because it runs on Node 24. The runtime
     # imports TypeScript automation modules and relies on Node 24's type stripping.
     #
@@ -115,7 +102,11 @@ runs:
         github-token: ${{ inputs.github-token }}
         script: |
           // Scrub before importing: the runtime reads this process environment, and the Pi
-          // subprocess inherits it.
+          // subprocess inherits it. Deleting from this process rather than writing empty values to
+          // GITHUB_ENV is what keeps the control step-scoped. A GITHUB_ENV write outlives the step
+          // and cannot be undone, so it would disarm any later step that legitimately needs OIDC,
+          // `setup-kipp`'s own registry exchange included, for no gain: the runner re-injects fresh
+          // values into every step process anyway, so it never protected a later step to begin with.
           const OIDC_REQUEST_VARIABLES = ["ACTIONS_ID_TOKEN_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
           if (process.env.KIPP_SCRUB_OIDC_ENV === "true") {
             for (const name of OIDC_REQUEST_VARIABLES) delete process.env[name]
