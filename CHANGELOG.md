@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.5.0](https://github.com/MakerXStudio/shared-config/compare/v2.4.0...v2.5.0) (2026-08-30)
+
+
+### Features
+
+* add optional version input to node-trusted-publish ([28ab4b7](https://github.com/MakerXStudio/shared-config/commit/28ab4b75c385b9b0880e5736ca8114caaf688ab8))
+* add optional version input to node-trusted-publish ([4082196](https://github.com/MakerXStudio/shared-config/commit/4082196bbd2dbb836821af268d537d4df913d1eb))
+* **ci:** add Kipp Managed Services composite actions ([eff5d31](https://github.com/MakerXStudio/shared-config/commit/eff5d317258a8cd9743da8554698eca25e557f01))
+* **ci:** add Kipp Managed Services composite actions ([a78372e](https://github.com/MakerXStudio/shared-config/commit/a78372e5934a14ac7aae319669fd02f9e2116719))
+* **ci:** add node-makerx-npm-trusted-publish workflow ([75f8872](https://github.com/MakerXStudio/shared-config/commit/75f88727b1ab0e7c0a41d2eac2e3cec48594001a))
+* **ci:** add node-makerx-npm-trusted-publish workflow ([a990961](https://github.com/MakerXStudio/shared-config/commit/a990961d34ca71a998d4c442378e58d5a3569f29))
+* **ci:** give run-kipp-automation an optional stage input ([39344fd](https://github.com/MakerXStudio/shared-config/commit/39344fd9275be0ab6662486275cba9cb92f7f306))
+* **ci:** give run-kipp-automation an optional stage input ([72c2ba4](https://github.com/MakerXStudio/shared-config/commit/72c2ba4e3dc91126eecdbbc4c5d295b6ac13f3b9))
+* **ci:** let setup-kipp use a local Kipp package ([a29720e](https://github.com/MakerXStudio/shared-config/commit/a29720ef6cfa2fbd49f3a9377b9a0d9d9112f0d2))
+* **ci:** support local Kipp packages and fix OIDC scrubbing ([16baa26](https://github.com/MakerXStudio/shared-config/commit/16baa26021e850f0aaa224ae5c4093ac0763842a))
+
+
+### Bug Fixes
+
+* **ci:** scope the OIDC scrub to the automation step ([5af5403](https://github.com/MakerXStudio/shared-config/commit/5af54030cc28f0a0420246151d947a47e6e207e7))
+* **ci:** scope the OIDC scrub to the automation step ([6a06fff](https://github.com/MakerXStudio/shared-config/commit/6a06fff3b8fb97d7829160e1bf45ec391dc2cdb5))
+* **ci:** scrub OIDC variables in the automation process ([9061e9a](https://github.com/MakerXStudio/shared-config/commit/9061e9af4ead82ae0d36519d8411d5eee2354172))
+
 ## [2.4.0](https://github.com/MakerXStudio/shared-config/compare/v2.3.0...v2.4.0) (2026-05-22)
 
 
