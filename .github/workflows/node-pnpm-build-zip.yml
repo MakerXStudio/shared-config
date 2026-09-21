@@ -9,6 +9,7 @@ on:
         required: false
         type: string
         default: "9"
+        description: Version of pnpm to use. Passing an explicit empty string defers resolution to the packageManager field of <working-directory>/package.json.
       node-version:
         required: false
         type: string
@@ -68,10 +69,20 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup pnpm
+      # pnpm must be on PATH before setup-node's cache: pnpm can resolve it
+      - name: Setup pnpm (version)
+        if: ${{ inputs.pnpm-version != '' }}
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
         with:
           version: ${{ inputs.pnpm-version }}
+          standalone: true
+
+      # resolves the packageManager field
+      - name: Setup pnpm (from packageManager)
+        if: ${{ inputs.pnpm-version == '' }}
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        with:
+          package_json_file: ${{ inputs.working-directory }}/package.json
           standalone: true
 
       - name: Use Node.js ${{ inputs.node-version }}
