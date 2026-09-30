@@ -426,7 +426,6 @@ runs:
           exit 1
         }
 
-        # Prints absent, object or other for the value at kipp.tools and the given keys below it.
         tools_kind() {
           MANIFEST_PATH="$MANIFEST" node -e '
             const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
