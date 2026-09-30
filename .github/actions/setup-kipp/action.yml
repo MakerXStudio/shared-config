@@ -407,6 +407,144 @@ runs:
 
         echo "Resolved Pi $PI_VERSION and runtime entry point $RUNTIME_PATH."
 
+    # Pi's find and grep tools look for fd and rg in the agent directory's bin before PATH.
+    - name: Install search tools
+      shell: bash
+      env:
+        PACKAGE_PATH: ${{ steps.download.outputs.package-path }}
+        AGENT_DIR: ${{ steps.pi-env.outputs.agent-dir }}
+      run: |
+        set -euo pipefail
+
+        MANIFEST="$PACKAGE_PATH/package.json"
+        EXACT_VERSION='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+        SHA256='^[0-9a-f]{64}$'
+        PLATFORMS=(linux-x64 linux-arm64)
+
+        fail() {
+          echo "::error::$1"
+          exit 1
+        }
+
+        # Prints absent, object or other for the value at kipp.tools and the given keys below it.
+        tools_kind() {
+          MANIFEST_PATH="$MANIFEST" node -e '
+            const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+            let value = (require(process.env.MANIFEST_PATH).kipp || {}).tools;
+            for (const key of process.argv.slice(1)) value = isObject(value) ? value[key] : undefined;
+            process.stdout.write(value === undefined ? "absent" : isObject(value) ? "object" : "other");
+          ' "$@"
+        }
+
+        read_tools_field() {
+          MANIFEST_PATH="$MANIFEST" node -e '
+            let value = (require(process.env.MANIFEST_PATH).kipp || {}).tools;
+            for (const key of process.argv.slice(1)) value = value !== null && typeof value === "object" ? value[key] : undefined;
+            process.stdout.write(typeof value === "string" ? value : "");
+          ' "$@"
+        }
+
+        case "$(tools_kind)" in
+          absent)
+            echo "::notice::The installed Kipp package does not declare 'kipp.tools', so fd and rg were not installed. Upgrade kipp-version to a release that pins them."
+            exit 0
+            ;;
+          other) fail "The installed Kipp package declares 'kipp.tools' but it is not an object." ;;
+        esac
+
+        case "$RUNNER_OS/$RUNNER_ARCH" in
+          Linux/X64) RUNNER_PLATFORM=linux-x64 ;;
+          Linux/ARM64) RUNNER_PLATFORM=linux-arm64 ;;
+          *) RUNNER_PLATFORM='' ;;
+        esac
+
+        # Validate every pin before choosing one, so a malformed block fails on any runner.
+        # Indexed arrays keep this step working in the bash 3.2 that macOS runners ship.
+        TOOLS=(fd rg)
+        VERSIONS=()
+        URLS=()
+        SHAS=()
+        for i in "${!TOOLS[@]}"; do
+          TOOL="${TOOLS[$i]}"
+          case "$TOOL" in
+            fd) REPO='sharkdp/fd' ;;
+            rg) REPO='BurntSushi/ripgrep' ;;
+          esac
+          URL_PATTERN="^https://github\.com/$REPO/releases/download/([A-Za-z0-9][A-Za-z0-9._+-]*)/[A-Za-z0-9][A-Za-z0-9._+-]*\.tar\.gz$"
+
+          [ "$(tools_kind "$TOOL")" = object ] || fail "The installed Kipp package does not declare 'kipp.tools.$TOOL' as an object."
+          VERSION="$(read_tools_field "$TOOL" version)"
+          [[ "$VERSION" =~ $EXACT_VERSION ]] || fail "The installed Kipp package does not declare 'kipp.tools.$TOOL.version' as an exact version."
+          VERSIONS[i]="$VERSION"
+          [ "$(tools_kind "$TOOL" assets)" = object ] || fail "The installed Kipp package does not declare 'kipp.tools.$TOOL.assets' as an object."
+
+          for PLATFORM in "${PLATFORMS[@]}"; do
+            FIELD="kipp.tools.$TOOL.assets.$PLATFORM"
+            case "$(tools_kind "$TOOL" assets "$PLATFORM")" in
+              absent) continue ;;
+              other) fail "The installed Kipp package declares '$FIELD' but it is not an object." ;;
+            esac
+            URL="$(read_tools_field "$TOOL" assets "$PLATFORM" url)"
+            SHA="$(read_tools_field "$TOOL" assets "$PLATFORM" sha256 | tr '[:upper:]' '[:lower:]')"
+            [[ "$URL" =~ $URL_PATTERN ]] || fail "The installed Kipp package does not declare '$FIELD.url' as a .tar.gz release download from https://github.com/$REPO."
+            TAG="${BASH_REMATCH[1]}"
+            [ "$TAG" = "$VERSION" ] || [ "$TAG" = "v$VERSION" ] ||
+              fail "The installed Kipp package declares '$FIELD.url' from release $TAG, which does not match version $VERSION."
+            [[ "$SHA" =~ $SHA256 ]] || fail "The installed Kipp package does not declare '$FIELD.sha256' as 64 hexadecimal characters."
+            if [ "$PLATFORM" = "$RUNNER_PLATFORM" ]; then
+              URLS[i]="$URL"
+              SHAS[i]="$SHA"
+            fi
+          done
+        done
+
+        if [ -z "$RUNNER_PLATFORM" ]; then
+          echo "::notice::setup-kipp installs fd and rg only on Linux X64 and ARM64 runners, so they were not installed on this $RUNNER_OS $RUNNER_ARCH runner."
+          exit 0
+        fi
+
+        BIN_DIR="$AGENT_DIR/bin"
+        WORK_DIR="$(mktemp -d "$RUNNER_TEMP/kipp-search-tools.XXXXXX")"
+        trap 'rm -rf "$WORK_DIR"' EXIT
+        mkdir -p "$BIN_DIR"
+
+        for i in "${!TOOLS[@]}"; do
+          TOOL="${TOOLS[$i]}"
+          VERSION="${VERSIONS[$i]}"
+          URL="${URLS[$i]:-}"
+          SHA="${SHAS[$i]:-}"
+          if [ -z "$URL" ]; then
+            echo "::notice::The installed Kipp package pins no $RUNNER_PLATFORM asset for $TOOL $VERSION, so $TOOL was not installed."
+            continue
+          fi
+          ARCHIVE="$WORK_DIR/$TOOL.tar.gz"
+          EXTRACT_DIR="$WORK_DIR/$TOOL"
+
+          curl -sS --fail --location --proto '=https' --proto-redir '=https' --retry 3 --max-time 120 \
+            -o "$ARCHIVE" "$URL" || fail "Failed to download $TOOL $VERSION from $URL."
+
+          ACTUAL_SHA="$(sha256sum "$ARCHIVE" | cut -d ' ' -f 1)"
+          [ "$ACTUAL_SHA" = "$SHA" ] ||
+            fail "The $TOOL $VERSION archive from $URL has SHA-256 $ACTUAL_SHA, but the Kipp package pins $SHA."
+
+          mkdir "$EXTRACT_DIR"
+          tar -xzf "$ARCHIVE" -C "$EXTRACT_DIR" --no-same-owner ||
+            fail "Failed to extract the $TOOL $VERSION archive from $URL."
+
+          BINARY=''
+          MATCHES=0
+          while IFS= read -r FOUND; do
+            BINARY="$FOUND"
+            MATCHES=$((MATCHES + 1))
+          done < <(find "$EXTRACT_DIR" -type f -name "$TOOL")
+          [ "$MATCHES" -eq 1 ] ||
+            fail "The $TOOL $VERSION archive from $URL holds $MATCHES files named $TOOL, expected exactly one."
+
+          install -m 0755 "$BINARY" "$BIN_DIR/$TOOL"
+          "$BIN_DIR/$TOOL" --version || fail "The installed $TOOL $VERSION at $BIN_DIR/$TOOL did not run."
+          echo "Installed $TOOL $VERSION for $RUNNER_PLATFORM at $BIN_DIR/$TOOL."
+        done
+
     - name: Install Pi
       shell: bash
       env:
