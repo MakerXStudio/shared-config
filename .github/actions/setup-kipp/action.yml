@@ -544,20 +544,78 @@ runs:
           echo "Installed $TOOL $VERSION for $RUNNER_PLATFORM at $BIN_DIR/$TOOL."
         done
 
+    # The Kipp package ships a lockfile for Pi, so Pi's whole dependency tree is pinned.
     - name: Install Pi
+      id: pi
       shell: bash
       env:
+        PACKAGE_PATH: ${{ steps.download.outputs.package-path }}
         PI_VERSION: ${{ steps.runtime.outputs.pi-version }}
-      run: | # zizmor: ignore[adhoc-packages]
+      run: |
         set -euo pipefail
-        # PI_VERSION was validated as an exact version.
-        npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@$PI_VERSION"
-        pi --version
+
+        RELATIVE_PATH='^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
+
+        fail() {
+          echo "::error::$1"
+          exit 1
+        }
+
+        PI_INSTALL="$(MANIFEST_PATH="$PACKAGE_PATH/package.json" node -e '
+          const value = (require(process.env.MANIFEST_PATH).kipp || {}).piInstall;
+          process.stdout.write(typeof value === "string" ? value : "");
+        ')"
+
+        [ -n "$PI_INSTALL" ] ||
+          fail "The installed Kipp package does not declare 'kipp.piInstall'. Use the Kipp release that matches this setup-kipp pin."
+
+        # The pattern also rejects line breaks, so the value is safe to quote in diagnostics below.
+        [[ "$PI_INSTALL" =~ $RELATIVE_PATH ]] ||
+          fail "The installed Kipp package does not declare 'kipp.piInstall' as a relative path of letters, digits, '.', '_', '-' and '/'."
+        case "/$PI_INSTALL/" in
+          */./* | */../*) fail "The Kipp package declares 'kipp.piInstall' as '$PI_INSTALL', which does not name a subdirectory of the package." ;;
+        esac
+
+        PACKAGE_ROOT="$(cd -P "$PACKAGE_PATH" && pwd)"
+        [ -d "$PACKAGE_ROOT/$PI_INSTALL" ] ||
+          fail "The Kipp package declares 'kipp.piInstall' as '$PI_INSTALL' but no directory exists at $PACKAGE_ROOT/$PI_INSTALL."
+        PI_SOURCE="$(cd -P "$PACKAGE_ROOT/$PI_INSTALL" && pwd)"
+        case "$PI_SOURCE/" in
+          "$PACKAGE_ROOT"/?*) ;;
+          *) fail "The Kipp package declares 'kipp.piInstall' as '$PI_INSTALL', which resolves to $PI_SOURCE, not a subdirectory of the package." ;;
+        esac
+        for FILE in package.json package-lock.json; do
+          if [ ! -f "$PI_SOURCE/$FILE" ] || [ -L "$PI_SOURCE/$FILE" ]; then
+            fail "The Kipp package declares 'kipp.piInstall' as '$PI_INSTALL' but $PI_SOURCE/$FILE is not a regular file."
+          fi
+        done
+
+        PI_ROOT="$(mktemp -d "$RUNNER_TEMP/kipp-pi.XXXXXX")"
+        cp "$PI_SOURCE/package.json" "$PI_SOURCE/package-lock.json" "$PI_ROOT/"
+
+        # Kipp has already vetted the locked releases, so a runner's release-age policy must not refuse them.
+        npm ci --prefix "$PI_ROOT" --ignore-scripts --no-audit --no-fund --min-release-age=0
+
+        PI_BIN="$PI_ROOT/node_modules/.bin/pi"
+        [ -x "$PI_BIN" ] || fail "The Pi lockfile in the Kipp package installed no pi binary at $PI_BIN."
+        INSTALLED_VERSION="$("$PI_BIN" --version)" || fail "Pi at $PI_BIN did not run."
+        [ "$INSTALLED_VERSION" = "$PI_VERSION" ] ||
+          fail "Pi at $PI_BIN reports version '${INSTALLED_VERSION//[$'\r\n']/ }', but the Kipp package declares 'kipp.supportedPiVersion' as $PI_VERSION."
+
+        # PI_BIN comes only from RUNNER_TEMP, mktemp and a literal, never from an input or the
+        # manifest, so it cannot inject a line. The braces only keep zizmor's github-env audit quiet.
+        {
+          echo "KIPP_PI_BIN=$PI_BIN"
+        } >> "$GITHUB_ENV"
+        echo "pi-bin=$PI_BIN" >> "$GITHUB_OUTPUT"
+
+        echo "Installed Pi $PI_VERSION from the Kipp package's lockfile at $PI_BIN."
 
     - name: Install Kipp into Pi
       shell: bash
       env:
         PACKAGE_PATH: ${{ steps.download.outputs.package-path }}
+        PI_BIN: ${{ steps.pi.outputs.pi-bin }}
       run: |
         set -euo pipefail
-        pi install "$PACKAGE_PATH"
+        "$PI_BIN" install "$PACKAGE_PATH"
