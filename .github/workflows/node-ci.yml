@@ -142,8 +142,11 @@ jobs:
         env: ${{ fromJson(inputs.test-environment-variables) }}
       
         #Requires permissions.checks: write
+        # Reporting only: the Test step already fails the job on failing tests, and this action intermittently
+        # fails to publish (GitHub API errors), which shouldn't block a release.
       - name: Publish test results
         if: ${{ always() && inputs.output-test-results }}
+        continue-on-error: true
         uses: phoenix-actions/test-reporting@7317eea6e13c47348dd0bb318669485157c518d6 # v16
         with:
           name: Test results
