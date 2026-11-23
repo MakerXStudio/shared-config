@@ -40,6 +40,11 @@ on:
         required: false
         type: string
         default: '**/test-results.xml'
+      test-results-name:
+        description: Name of the check run that shows the test results. Give each job that publishes test results in the same workflow run a different name.
+        required: false
+        type: string
+        default: Test results
       audit-script:
         required: false
         type: string
@@ -149,7 +154,7 @@ jobs:
         continue-on-error: true
         uses: phoenix-actions/test-reporting@7317eea6e13c47348dd0bb318669485157c518d6 # v16
         with:
-          name: Test results
+          name: ${{ inputs.test-results-name }}
           path: ${{ inputs.test-results-file-pattern }}
           reporter: jest-junit
           output-to: checks
