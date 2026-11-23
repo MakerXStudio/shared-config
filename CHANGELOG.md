@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/MakerXStudio/shared-config/compare/v2.5.0...v2.6.0) (2026-11-23)
+
+
+### Features
+
+* **ci:** add a test-results-name input to node-ci ([#192](https://github.com/MakerXStudio/shared-config/issues/192)) ([d4c2c5f](https://github.com/MakerXStudio/shared-config/commit/d4c2c5f3fae77edc559c1c3834da73817b555e8e))
+
 ## [2.5.0](https://github.com/MakerXStudio/shared-config/compare/v2.4.0...v2.5.0) (2026-11-16)
 
 
